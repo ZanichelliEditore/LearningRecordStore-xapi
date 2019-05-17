@@ -1,0 +1,43 @@
+version: "2"
+services:
+  web:
+    build:
+      context: ./
+      dockerfile: web-dev.dockerfile
+    container_name: lrs_zani_web
+    volumes:
+      - ./:/var/www
+    ports:
+      - "8085:80"
+    links:
+      - app
+  app:
+    build:
+      context: ./
+      dockerfile: app-dev.dockerfile
+    container_name: lrs_zani_app
+    volumes:
+      - ./:/var/www
+    environment:
+      - "DB_HOST=database"
+      - "DB_PORT=3306"
+      - "DB_DATABASE=${DB_DATABASE}"
+  database:
+    image: mysql:5.7
+    container_name: lrs_zani_db
+    environment:
+      - "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}"
+      - "MYSQL_DATABASE=${MYSQL_DATABASE}"
+    ports:
+      - "33066:3306"
+  phpmyadmin:
+    image: "phpmyadmin/phpmyadmin"
+    container_name: lrs_zani_phpmyadmin
+    links:
+      - database
+    ports:
+      - "8086:80"
+    environment:
+      - "PMA_HOST=${PMA_HOST}"
+      - "PMA_USER=${PMA_USER}"
+      - "PMA_PASSWORD=${PMA_PASSWORD}"

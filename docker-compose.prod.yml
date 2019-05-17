@@ -1,0 +1,32 @@
+version: "2"
+services:
+  web:
+    build:
+      context: ./
+      dockerfile: web-prod.dockerfile
+    container_name: lrs_zani_web
+    volumes:
+        - app:/var/www
+    ports:
+        - "80:80"
+        - "443:443"
+    links:
+        - app
+    restart: always
+    network_mode: "bridge"
+  app:
+    build:
+      context: ./
+      dockerfile: app-prod.dockerfile
+    container_name: lrs_zani_app
+    volumes:
+      - app:/var/www
+      - appStorage:/var/www/storage
+      - appVendor:/var/www/vendor
+    restart: always
+    network_mode: "bridge"
+volumes:
+    app:
+    appStorage:
+    appVendor:
+    
