@@ -54,7 +54,7 @@ These are the instructions to follow to set up the project on your local environ
 
 1.  Git clone the repository into your folder.
 
-    git clone git@bitbucket.org:zanichelli/lrs_zani.git
+    https://github.com/ZanichelliEditore/LearningRecordStore-xapi.git
 
 2.  Copy env.example to .env
 
