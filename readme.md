@@ -2,13 +2,17 @@
 
 An LRS implementing the xAPI to send data to AWS S3 storage.
 
-# Requirements
+# Starting
 
 View Docker and Docker-compose documentations:
 
     - https://docs.docker.com
 
     - https://docs.docker.com/compose/
+
+See the link above to know better xAPI structure:
+
+    - https://github.com/adlnet/xAPI-Spec
 
 # Command shortcut for Docker
 
