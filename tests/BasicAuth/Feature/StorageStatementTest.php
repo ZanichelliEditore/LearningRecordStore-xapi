@@ -34,9 +34,9 @@ class StorageStatementTest extends TestCase
         $res = $this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], $header);
         $id = json_decode($res->getContent())[0];
         $statement = $repo->find('lrs_test', $id);
-
+        
         Storage::disk('local')->assertExists(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'lrs_test' . DIRECTORY_SEPARATOR . $id . '.json');
-        $this->assertEquals($id, $statement->id);
+        $this->assertEquals($id, $statement->statement->id);
 
         HelperTest::deleteTestingFolders();
     }
@@ -88,10 +88,16 @@ class StorageStatementTest extends TestCase
         
         $storageService = new StatementStorageService();
         $content  = $storageService->read('lrs_test');
-        $expected = '['.json_encode($helper->getStatementWithUuid($uid), JSON_UNESCAPED_SLASHES).']';
-
+        
+        $statement = [
+            'lrs_id' => '1234567890',
+            'client_id' => '85834ea3f1150032809f16ab1d4ec194b1ec8608',
+            'statement' => $helper->getStatementWithUuid($uid)
+        ];
+        $expected = '['.json_encode($statement, JSON_UNESCAPED_SLASHES).']';
+        
         $filteredContent = json_decode($content);
-        unset($filteredContent[0]->stored);
+        unset($filteredContent[0]->statement->stored);
 
         $this->assertEquals($expected, json_encode($filteredContent, JSON_UNESCAPED_SLASHES));
     }
@@ -113,11 +119,21 @@ class StorageStatementTest extends TestCase
         
         $storageService = new StatementStorageService();
         $content  = $storageService->read('lrs_test');
-        $expected = [json_encode($helper->getStatementWithUuid($uid), JSON_UNESCAPED_SLASHES),json_encode($helper->getStatementWithUuid($uid2), JSON_UNESCAPED_SLASHES)];
+        $statement = [
+            'lrs_id' => '1234567890',
+            'client_id' => '85834ea3f1150032809f16ab1d4ec194b1ec8608',
+            'statement' => $helper->getStatementWithUuid($uid)
+        ];
+        $statement2 = [
+            'lrs_id' => '1234567890',
+            'client_id' => '85834ea3f1150032809f16ab1d4ec194b1ec8608',
+            'statement' => $helper->getStatementWithUuid($uid2)
+        ];
+        $expected = [json_encode($statement, JSON_UNESCAPED_SLASHES),json_encode($statement2, JSON_UNESCAPED_SLASHES)];
 
         $filteredContent = json_decode($content);
         foreach ($filteredContent as $statement) {
-            unset($statement->stored);
+            unset($statement->statement->stored);
         }
         $this->assertContains($expected[0], json_encode($filteredContent, JSON_UNESCAPED_SLASHES));
         $this->assertContains($expected[1], json_encode($filteredContent, JSON_UNESCAPED_SLASHES));

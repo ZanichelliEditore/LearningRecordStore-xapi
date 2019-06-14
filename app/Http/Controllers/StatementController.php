@@ -41,7 +41,7 @@ class StatementController extends Controller
      *         description="General structure to follow to send a statement",
      *         @OA\MediaType(
      *             mediaType="application/json",
-     *             @OA\Schema(ref="#/components/schemas/Statements")
+     *             @OA\Schema(ref="#/components/schemas/Statement")
      *         )
      *     ),
      *     @OA\Response(
@@ -76,6 +76,7 @@ class StatementController extends Controller
         $computedStatement = [];
         $lrs = LockerLrs::getLrsFromAuth($request);        
         $authority = LockerLrs::getAuthorityFromAuth($request);
+        $clientId = LockerLrs::getClientId($request);
         $folder = $lrs->folder;
 
         if (!is_array($request->input('0'))) {
@@ -84,14 +85,18 @@ class StatementController extends Controller
                 return $error;
             }
             
-            $this->statement = $request;
-            $statementIds = $xapiValidator->validateStatement($request, $this->statement, $authority);           
+            $statement = $request;
+            $statementIds = $xapiValidator->validateStatement($request, $statement, $authority);           
 
             if (!is_string($statementIds)) {
                 return $statementIds;
             }
-            
-            $computedStatement[] = (new Statement($this->statement->all()))->jsonSerialize();
+
+            $computedStatement[] = [
+                'lrs_id' => $lrs->_id,
+                'client_id' => $clientId,
+                'statement' => $statement->all()
+            ];
         }        
         $statementIds = (array) $statementIds;
 
@@ -104,15 +109,21 @@ class StatementController extends Controller
                 return $error;
             }
 
-            $this->statement = $request->input($i);
-            $validateResponse  = $xapiValidator->validateStatement($req, $this->statement, $authority);
+            $statement = $request->input($i);
+            $validateResponse  = $xapiValidator->validateStatement($req, $statement, $authority);
 
             if (!is_string($validateResponse)) {
                 $content = json_decode($validateResponse->getContent(), true);
                 return Helper::getResponse(implode($content['message']));
             }
+
+            $computedStatement[] = [
+                'lrs_id' => $lrs->_id,
+                'client_id' => $clientId,
+                'statement' => $statement
+            ];
+
             $statementIds[] = $validateResponse;
-            $computedStatement[] = (new Statement($this->statement))->jsonSerialize();
         }
 
         try {
@@ -178,7 +189,7 @@ class StatementController extends Controller
      * Get the statement with the unique id.
      * @param Request $request
      * @return array
-     */
+    */
     public function getList(Request $request)
     {   
         
@@ -206,7 +217,7 @@ class StatementController extends Controller
     /**
      * @OA\Get(
      *     path="/data/xAPI/statements/{id}",
-     *     summary="List of statements",
+     *     summary="Get one statement",
      *     tags={"xAPI"},
      *     security={{"basicAuth":{}}},
      *     description="Use to get statement object",

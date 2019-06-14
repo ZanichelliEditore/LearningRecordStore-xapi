@@ -9,13 +9,13 @@
      *     description="REST APIs to validate and store statements",
      *     @OA\Contact(
      *         name="Zanichelli DEV team",
-     *         email="allforone@zanichelli.it"
+     *         email="giuseppe.saraceno@zanichelli.it"
      *     ),
      * )
      * @OA\Server(
      *     url=APP_URL,
      * )
-     *
+     * 
      */
 
     /**
@@ -42,51 +42,70 @@
      *         schema="Statements",
      *         type="array",
      *         @OA\Items(
-     *             items="statement",
+     *             items="statements",
      *             type="object",
-     *             required={"actor", "verb", "object"},
      *             @OA\Property(
-     *                 property="actor",
-     *                 type="object",
-     *                 ref="#/components/schemas/Actor"
-     *             ),
-     *             @OA\Property(
-     *             property="verb",
-     *             type="object",
-     *             ref="#/components/schemas/Verb"
-     *             ),
-     *             @OA\Property(
-     *                 property="object",
-     *                 type="object",
-     *                 ref="#/components/schemas/Object"
-     *             ),
-     *             @OA\Property(
-     *                 property="context",
-     *                 type="object",
-     *                 ref="#/components/schemas/Context"
-     *             ),
-     *             @OA\Property(
-     *                 property="result",
-     *                 type="object",
-     *                 ref="#/components/schemas/Result"
-     *             ),
-     *             @OA\Property(
-     *                 property="timestamp",
-     *                 type="date_timeZone",
-     *                 example="2018-12-20T12:17:00+00:00",
-     *                 description="Set by the LRS if not provided"
-     *             ),
-     *             @OA\Property(
-     *                 property="version",
+     *                 property="lrs_id",
      *                 type="string",
-     *                 example="1.0.0",
-     *                 description="Parameter Not Raccomended"
+     *                 example="1234567890"
      *             ),
      *             @OA\Property(
-     *                 property="authority",
-     *                 type="object",
-     *                 ref="#/components/schemas/Authority"
+     *                 property="client_id",
+     *                 type="string",
+     *                 example="1sad23fd4fd567fd890"
      *             ),
+     *             @OA\Property(
+     *                 property="statement",
+     *                 type="object",
+     *                 ref="#/components/schemas/Statement"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Schema(
+     *         schema="Statement",
+     *         type="object",
+     *         required={"actor", "verb", "object"},
+     *         @OA\Property(
+     *             property="actor",
+     *             type="object",
+     *             ref="#/components/schemas/Actor"
+     *         ),
+     *         @OA\Property(
+     *         property="verb",
+     *         type="object",
+     *         ref="#/components/schemas/Verb"
+     *         ),
+     *         @OA\Property(
+     *             property="object",
+     *             type="object",
+     *             ref="#/components/schemas/Object"
+     *         ),
+     *         @OA\Property(
+     *             property="context",
+     *             type="object",
+     *             ref="#/components/schemas/Context"
+     *         ),
+     *         @OA\Property(
+     *             property="result",
+     *             type="object",
+     *             ref="#/components/schemas/Result"
+     *         ),
+     *         @OA\Property(
+     *             property="timestamp",
+     *             type="date_timeZone",
+     *             example="2018-12-20T12:17:00+00:00",
+     *             description="Set by the LRS if not provided"
+     *         ),
+     *         @OA\Property(
+     *             property="version",
+     *             type="string",
+     *             example="1.0.0",
+     *             description="Parameter Not Raccomended"
+     *         ),
+     *         @OA\Property(
+     *             property="authority",
+     *             type="object",
+     *             ref="#/components/schemas/Authority"
      *         )
      *     ),
      *     @OA\Response(

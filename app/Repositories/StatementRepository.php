@@ -20,8 +20,8 @@ class StatementRepository implements StatementRepositoryInterface
     {
         $this->client = S3Client::factory([
             'credentials' => [
-                'key'    => env('AWS_SECRET_ACCESS_KEY'),
-                'secret' => env('AWS_SECRET_ACCESS_SECRET'),
+                'key'    => env('AWS_ACCESS_KEY_ID'),
+                'secret' => env('AWS_SECRET_ACCESS_KEY'),
             ],
             'region' => env('AWS_DEFAULT_REGION'),
             'version' => 'latest',
@@ -78,7 +78,7 @@ class StatementRepository implements StatementRepositoryInterface
 
         if (isset($verb)) {
             foreach ($merge as $key => $val) {
-                if (strpos($val->verb->id, $verb) === false) {
+                if (strpos($val->statement->verb->id, $verb) === false) {
                     unset($merge[$key]);
                 } 
             }
@@ -128,7 +128,7 @@ class StatementRepository implements StatementRepositoryInterface
         $content = $res['statements'];
         
         foreach ($content as $ele) {   
-            if ($ele->id == $id) {
+            if ($ele->statement->id == $id) {
                 return $ele;
             }
         }

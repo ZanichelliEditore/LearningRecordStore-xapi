@@ -105,7 +105,7 @@ class PassportRepositoryStoredStatementTest extends TestCase
         $this->call('POST', HelperTest::URL, [$statement1, $statement2], [], [], $header)->getContent();
 
         $statements = $repo->all('lrs_test', self::LIMIT, $verb);
-        $statement = $statements['statements'][0];
+        $statement = $statements['statements'][0]->statement;
         unset($statement->id);
         unset($statement->stored);     
         $this->assertTrue(!isset($statements['statements'][0]));
@@ -157,6 +157,7 @@ class PassportRepositoryStoredStatementTest extends TestCase
         $content = json_decode($this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], $header)->getContent());
 
         $statement = $repo->find('lrs_test', $content[0]);
+        $statement = $statement->statement;
         unset($statement->id);
         unset($statement->stored);
 

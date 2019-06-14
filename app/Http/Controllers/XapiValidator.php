@@ -381,7 +381,7 @@ class XapiValidator extends Controller
             $statement["authority"] = [
                 "objectType" => "Agent",
                 "name" => $authority->getName() ? $authority->getName() : "New Client",
-                "mbox" => $authority->getMbox() ? $authority->getMbox() : "ltszani@gmail.com"
+                "mbox" => $authority->getMbox() ? $authority->getMbox() : "example@gmail.com"
             ];
         }
         
@@ -390,7 +390,7 @@ class XapiValidator extends Controller
             $id = Uuid::uuid1();
         }
         $statement['id'] = (string) $id;
-        
+                
         return (string) $id;
     }
 

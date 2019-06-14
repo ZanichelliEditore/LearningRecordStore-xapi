@@ -58,7 +58,7 @@ class RepositoryStoredStatementTest extends TestCase
         $content = $this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], HelperTest::createBasicHeader());
 
         $statements = $repo->all('lrs_test', self::LIMIT);
-        $statement = $statements['statements'][0];
+        $statement = $statements['statements'][0]->statement;
         unset($statement->id);
         unset($statement->stored);
 
@@ -86,7 +86,8 @@ class RepositoryStoredStatementTest extends TestCase
         $this->call('POST', HelperTest::URL, [$statement1, $statement2], [], [], HelperTest::createBasicHeader())->getContent();
 
         $statements = $repo->all('lrs_test', self::LIMIT, $verb);
-        $statement = $statements['statements'][0];
+
+        $statement = $statements['statements'][0]->statement;
         unset($statement->id);
         unset($statement->stored);     
         $this->assertTrue(!isset($statements[0]));
@@ -136,6 +137,7 @@ class RepositoryStoredStatementTest extends TestCase
         $content = json_decode($this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], HelperTest::createBasicHeader())->getContent());
 
         $statement = $repo->find('lrs_test', $content[0]);
+        $statement = $statement->statement;
         unset($statement->id);
         unset($statement->stored);
 
