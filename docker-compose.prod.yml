@@ -4,7 +4,7 @@ services:
     build:
       context: ./
       dockerfile: web-prod.dockerfile
-    container_name: lrs_zani_web
+    container_name: lrs_web
     volumes:
         - app:/var/www
     ports:
@@ -18,7 +18,7 @@ services:
     build:
       context: ./
       dockerfile: app-prod.dockerfile
-    container_name: lrs_zani_app
+    container_name: lrs_app
     volumes:
       - app:/var/www
       - appStorage:/var/www/storage

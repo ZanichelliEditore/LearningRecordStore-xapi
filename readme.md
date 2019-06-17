@@ -44,7 +44,7 @@ To **stop** the containers, use instead:
 
 Enter in the container (with the command above) and run the next commands inside it:
 
-    docker exec -it lrs_zani_app bash
+    docker exec -it lrs_app bash
 
 Then follow the step from **3 to 6** described after.
 
@@ -88,10 +88,10 @@ These are the instructions to follow to set up the project on your local environ
 
 - Run every method
 
-  - `docker exec lrs_zani_app vendor/bin/phpunit`
+  - `docker exec lrs_app vendor/bin/phpunit`
 
 - To generate the HTML code coverage report pass the following option: `--coverage-html tmp/coverage`
-  - `docker exec lrs_zani_app vendor/bin/phpunit --coverage-html tmp/coverage`
+  - `docker exec lrs_app vendor/bin/phpunit --coverage-html tmp/coverage`
 
 
 # Authentication

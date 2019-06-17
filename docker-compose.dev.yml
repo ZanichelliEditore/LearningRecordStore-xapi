@@ -4,7 +4,7 @@ services:
     build:
       context: ./
       dockerfile: web-dev.dockerfile
-    container_name: lrs_zani_web
+    container_name: lrs_web
     volumes:
       - ./:/var/www
     ports:
@@ -15,7 +15,7 @@ services:
     build:
       context: ./
       dockerfile: app-dev.dockerfile
-    container_name: lrs_zani_app
+    container_name: lrs_app
     volumes:
       - ./:/var/www
     environment:
@@ -24,7 +24,7 @@ services:
       - "DB_DATABASE=${DB_DATABASE}"
   database:
     image: mysql:5.7
-    container_name: lrs_zani_db
+    container_name: lrs_db
     environment:
       - "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}"
       - "MYSQL_DATABASE=${MYSQL_DATABASE}"
@@ -32,7 +32,7 @@ services:
       - "33066:3306"
   phpmyadmin:
     image: "phpmyadmin/phpmyadmin"
-    container_name: lrs_zani_phpmyadmin
+    container_name: lrs_phpmyadmin
     links:
       - database
     ports:

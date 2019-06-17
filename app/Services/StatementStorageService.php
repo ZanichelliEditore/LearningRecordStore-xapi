@@ -42,8 +42,8 @@ class StatementStorageService implements StatementServiceInterface
             Storage::makeDirectory($filePathBackup, $this->storagePermissionLevel ?: 0744, true, true);
         }
         
-        $filename = $statements[0]['id'] . '.json';
-
+        $filename = $statements[0]['statement']['id'] . '.json';
+        
         $glue = '';
         foreach ($statements as $statement) {
             $completeStringData .= $glue . json_encode($statement, JSON_UNESCAPED_SLASHES);
@@ -109,8 +109,8 @@ class StatementStorageService implements StatementServiceInterface
             Storage::makeDirectory($path_backup, $this->storagePermissionLevel ?: 0744, true, true);
         }
         
-        if (!Storage::put($path_backup .DIRECTORY_SEPARATOR.$fileName.'.json', $content)) { 
-            throw new StorageException('an internal error occurred while saving a backup of all data in '. $folder.' folder.');
+        if (!Storage::put($path_backup . DIRECTORY_SEPARATOR . $fileName . '.json', $content)) { 
+            throw new StorageException('an internal error occurred while saving a backup of all data in '. $folder . ' folder.');
         }  
     }
 

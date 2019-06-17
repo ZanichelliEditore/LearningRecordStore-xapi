@@ -1,7 +1,7 @@
 .PHONY: help up down shell npm_watch composer_update
 
 ENV ?= dev
-PROJECT ?= lrs_zani
+PROJECT ?= lrs
 
 help:                             ## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'

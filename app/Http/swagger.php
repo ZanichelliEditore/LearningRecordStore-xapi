@@ -5,7 +5,7 @@
      *
      * @OA\Info(
      *     version="1.0.0",
-     *     title="LRS system Zanichelli",
+     *     title="LRS system",
      *     description="REST APIs to validate and store statements",
      *     @OA\Contact(
      *         name="Zanichelli DEV team",
