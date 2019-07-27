@@ -24,12 +24,12 @@ class HelperTest
      *
      * @return array
      */
-    public function getStatement()
+    public function getStatement($name ="Giuseppe")
     {
         $statement = [
             "actor" => [
                 "objectType" => "Agent",
-                "name" => "Giuseppe",
+                "name" => $name,
                 "account" => [
                     "homePage" => "https://my.zanichelli.it",
                     "name" => "10881"
@@ -142,8 +142,8 @@ class HelperTest
     static function createBasicHeader()
     {
         return [
-            "PHP_AUTH_USER" => '85834ea3f1150032809f16ab1d4ec194b1ec8608',
-            "PHP_AUTH_PW" => 'PxEr4aRcHs4Tnfz7BatQqVoovCqSxXbqXKcmeJom'
+            "PHP_AUTH_USER" => env('CLIENT_ID'),
+            "PHP_AUTH_PW" => env('CLIENT_SECRET')
         ];
     }
 
@@ -155,6 +155,23 @@ class HelperTest
         Storage::deleteDirectory(self::STORAGE_PATH);
         Storage::deleteDirectory(self::STORAGE_BACKUP_PATH);
     }
+
+    /*
+    * Create a valid file content
+    */
+    public function createStatementFileContent($name){
+        $completeStringData = '';
+        $computedStatement[] = [
+            'statement' =>$this->getStatement($name)
+        ];
+        $glue = '';
+        foreach ($computedStatement as $statement) {
+            $completeStringData .= $glue . json_encode($statement, JSON_UNESCAPED_SLASHES);
+            $glue = ', ';
+        }
+        return $completeStringData;
+    }
+
 
 
 }

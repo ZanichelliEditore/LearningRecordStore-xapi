@@ -59,7 +59,7 @@ class LockerLrs
         } else if ($authorization !== null && strpos($authorization, 'Bearer') === 0) {
             list($username, $password) = self::getUserPassFromOAuth($bearerToken);
         } else {
-            throw new Exception('Invalid auth', 400);
+            throw new Exception('Invalid auth', 401);
         }
         return [$username, $password];
     }
@@ -87,13 +87,11 @@ class LockerLrs
     static function getLrsFromUserPass($username, $password)
     {
         $client = self::getClient($username, $password);
-        $lrs_id = (string)$client->lrs_id;
-        $lrs = Lrs::where('_id', $lrs_id)->first();
 
-        if (is_null($lrs)) {
+        if (is_null($client->lrs)) {
             throw new Exception('Unauthorized request.', 401);
         }
-        return $lrs;
+        return $client->lrs;
     }
 
     /**
