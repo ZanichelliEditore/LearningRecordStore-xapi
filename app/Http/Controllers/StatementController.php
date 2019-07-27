@@ -4,29 +4,24 @@ namespace App\Http\Controllers;
 
 use Exception;
 use App\Locker\Helper;
-use App\Models\Client;
 use App\Locker\LockerLrs;
 use App\Models\Statement;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\XapiValidator;
-use Illuminate\Support\Facades\Storage;
 use App\Services\StatementStorageService;
-use App\Repositories\StatementRepositoryInterface;
+use App\Http\Repositories\xapiRepositories\StatementRepositoryInterface;
 
 class StatementController extends Controller
 {
-    protected $statementRepository = null; 
-    protected $statementService = null;
+    protected $statementRepository; 
+    protected $statementService;
 
-    public function __construct(StatementStorageService $statementService, StatementRepositoryInterface $statementRepository)
+    public function __construct(StatementStorageService $statementService, StatementRepositoryInterface $statementRepository, LockerLrs $locker)
     {
         $this->statementService = $statementService;
         $this->statementRepository = $statementRepository;
+        $this->locker = $locker;
     }
     
     /**
@@ -53,8 +48,8 @@ class StatementController extends Controller
      *         ref="#/components/responses/Error400"
      *     ),
      *     @OA\Response(
-     *         response=401,
-     *         ref="#/components/responses/Error401"
+     *         response=403,
+     *         ref="#/components/responses/Error403"
      *     ),
      *     @OA\Response(
      *         response=500,
@@ -74,9 +69,9 @@ class StatementController extends Controller
         $xapiValidator = new XapiValidator();
         $statementIds = [];
         $computedStatement = [];
-        $lrs = LockerLrs::getLrsFromAuth($request);        
-        $authority = LockerLrs::getAuthorityFromAuth($request);
-        $clientId = LockerLrs::getClientId($request);
+        $lrs = $this->locker::getLrsFromAuth($request);        
+        $authority = $this->locker::getAuthorityFromAuth($request);
+        $clientId = $this->locker::getClientId($request);
         $folder = $lrs->folder;
 
         if (!is_array($request->input('0'))) {
@@ -182,6 +177,10 @@ class StatementController extends Controller
      *     @OA\Response(
      *         response=204,
      *         ref="#/components/responses/Success204"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         ref="#/components/responses/Error403"
      *     )
      * )
     */
@@ -197,7 +196,7 @@ class StatementController extends Controller
         $verb = $request->input('verb') ? $request->input('verb') : null;
         $page = $request->input('page');
         $page = isset($page) ? $request->input('page') : 1;
-        $lrs = LockerLrs::getLrsFromAuth($request);
+        $lrs = $this->locker::getLrsFromAuth($request);
         $folder = $lrs->folder;
         if (isset($page) && !is_numeric($page)) {
             return Helper::getResponse("The page parameter must be integer.", 400);
@@ -211,7 +210,7 @@ class StatementController extends Controller
             return response()->json($content);
         }
 
-        return Helper::getResponse("No statement found", 204);
+        return Helper::getResponse("No statement found", 204, true);
     }
 
     /**
@@ -238,6 +237,10 @@ class StatementController extends Controller
      *     @OA\Response(
      *         response=204,
      *         ref="#/components/responses/Success204"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         ref="#/components/responses/Error403"
      *     )
      * )
     */
@@ -249,7 +252,7 @@ class StatementController extends Controller
      */
     public function get(Request $request, string $id)
     {   
-        $lrs = LockerLrs::getLrsFromAuth($request);
+        $lrs = $this->locker::getLrsFromAuth($request);
         $folder = $lrs->folder;
 
         $statement = $this->statementRepository->find($folder, $id);
@@ -258,7 +261,7 @@ class StatementController extends Controller
             return response()->json($statement);
         }
 
-        return Helper::getResponse("No statement found", 204);
+        return Helper::getResponse("No statement found", 204, true);
     }
 
 }

@@ -1,17 +1,14 @@
 <?php
 
 use Rhumsaa\Uuid\Uuid;
+use \Mockery as Mockery;
 use App\Locker\HelperTest;
 use Illuminate\Support\Facades\Storage;
-use App\Console\Commands\SendFileBackup;
-use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\Console\Application as ConsoleApplication;
+use App\Http\Repositories\xapiRepositories\StatementRepository;
 
 class SendBackupFileToS3CommandTest extends TestCase
 {
-    private $command;
-    private $commandTester;
-
+    
     /**
      * creation class
      *
@@ -23,26 +20,6 @@ class SendBackupFileToS3CommandTest extends TestCase
         return $helper;
     }
 
-    /**
-     * Set up test variables and environment
-     *
-     * @return void
-     */
-    public function setUp()
-    {
-        parent::setUp();
-
-        $application = new ConsoleApplication();
-
-        $testedCommand = $this->app->make(SendFileBackup::class);
-        $testedCommand->setLaravel(app());
-        $application->add($testedCommand);
-
-        $this->command = $application->find('lrs:send-backup-files');
-
-        $this->commandTester = new CommandTester($this->command);
-    }
-
     /** 
      * @test
      * @return void
@@ -50,13 +27,12 @@ class SendBackupFileToS3CommandTest extends TestCase
     public function noFolderGivenTest()
     {
         Storage::fake('local');
-        $this->commandTester->execute([
-            '--folder' => '',
-        ]);
 
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["The folder is required"], $outputs);
-        $this->assertEquals(false, $this->commandTester->getStatusCode());
+        $statusCode = $this->artisan('lrs:send-backup-files', [
+            '--folder'  => ''
+        ]);
+        $this->assertEquals(1, $statusCode);
+
     }
 
     /** 
@@ -66,12 +42,12 @@ class SendBackupFileToS3CommandTest extends TestCase
     public function unrealFolderTest()
     {
         Storage::fake('local');
-        $this->commandTester->execute([
-            '--folder'  => 'e839hje3i3',
-        ]);
 
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["No directory found with the given name: cannot read from an unreal folder"], $outputs);
+        $statusCode = $this->artisan('lrs:send-backup-files', [
+            '--folder'  => 'e839hje3i3'
+        ]);
+        $this->assertEquals(1, $statusCode);
+
     }
 
     /** 
@@ -82,15 +58,12 @@ class SendBackupFileToS3CommandTest extends TestCase
     {
         Storage::fake('local');
         Storage::makeDirectory(HelperTest::STORAGE_BACKUP_PATH . DIRECTORY_SEPARATOR . 'example_1');
-
-        $this->commandTester->execute([
-            '--folder'  => 'example_1',
-        ]);
-
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["Begin", "The given folder is empty"], $outputs);
         
-        HelperTest::deleteTestingFolders();
+        $statusCode = $this->artisan('lrs:send-backup-files', [
+            '--folder'  => 'example_1'
+        ]);
+        $this->assertEquals(0, $statusCode);
+
     }
 
     /** 
@@ -99,24 +72,26 @@ class SendBackupFileToS3CommandTest extends TestCase
      */
     public function successCaseTest()
     {
-        $helper = $this->help();
         $uid = (string) Uuid::uuid1();
         $filePath = HelperTest::STORAGE_BACKUP_PATH . DIRECTORY_SEPARATOR . 'example_1';
 
         Storage::fake('local');
-
-        $statement = json_encode($helper->getStatementWithUuid($uid), JSON_UNESCAPED_SLASHES);
-
         Storage::makeDirectory($filePath);
+
+        $statement = json_encode($this->help()->getStatementWithUuid($uid), JSON_UNESCAPED_SLASHES);
         Storage::put($filePath . DIRECTORY_SEPARATOR . $uid . '.json', $statement);
 
-        $this->commandTester->execute([
-            '--folder'  => 'example_1',
-        ]);
+        $mockRepository = Mockery::mock(StatementRepository::class)->makePartial()
+            ->shouldReceive(['store' => true])
+            ->withAnyArgs()
+            ->once()
+            ->getMock();
+        $this->app->instance('App\Http\Repositories\xapiRepositories\StatementRepository', $mockRepository);
 
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["Begin", $filePath . DIRECTORY_SEPARATOR . $uid . ".json sent"], $outputs);
-        
-        HelperTest::deleteTestingFolders();
+        $statusCode = $this->artisan('lrs:send-backup-files', [
+            '--folder'  => 'example_1'
+        ]);
+        $this->assertEquals(0, $statusCode);
+
     }
 }

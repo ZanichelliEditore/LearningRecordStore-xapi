@@ -1,47 +1,16 @@
 <?php
 
+use \Mockery as Mockery;
 use App\Locker\HelperTest;
-use Illuminate\Support\Facades\Storage;
-use App\Console\Commands\SendAllDirectoriesFiles;
-use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\Console\Application as ConsoleApplication;
 use function GuzzleHttp\json_encode;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
+use App\Http\Repositories\xapiRepositories\StatementRepository;
+use App\Services\StatementStorageService;
+use App\Console\Commands\SendAllDirectoriesFiles;
 
 class SendAllDirectoriesFilesCommandTest extends TestCase
 {
-    private $command;
-    private $commandTester;
-
-    /**
-     * creation class
-     *
-     * @return HelperTest
-     */
-    private function  help()
-    {
-        $helper = new HelperTest();
-        return $helper;
-    }
-
-    /**
-     * Set up test variables and environment
-     *
-     * @return void
-     */
-    public function setUp()
-    {
-        parent::setUp();
-
-        $application = new ConsoleApplication();
-
-        $testedCommand = $this->app->make(SendAllDirectoriesFiles::class);
-        $testedCommand->setLaravel(app());
-        $application->add($testedCommand);
-
-        $this->command = $application->find('lrs:send-all-statements');
-
-        $this->commandTester = new CommandTester($this->command);
-    }
 
     /** 
      * @test
@@ -49,26 +18,44 @@ class SendAllDirectoriesFilesCommandTest extends TestCase
      */
     public function successCaseTest()
     {
-        $statement = json_encode($this->help()->getStatementWithSubstatement(), JSON_UNESCAPED_SLASHES);
 
         Storage::fake('local');
-
         Storage::makeDirectory(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR .'example_e1');
-        Storage::put(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'example_e1' . DIRECTORY_SEPARATOR . 'example.json', $statement);
+        
+        $mockRepository = Mockery::mock(StatementRepository::class)->makePartial()
+            ->shouldReceive(['store' => true])
+            ->withAnyArgs()
+            ->once()
+            ->getMock();
+        $this->app->instance('App\Http\Repositories\xapiRepositories\StatementRepository', $mockRepository);
+
+        $mockService = Mockery::mock(StatementStorageService::class)->makePartial()
+            ->shouldReceive(['storeBackup' => true, 'read' => true])
+            ->withAnyArgs()
+            ->once()
+            ->getMock();
+        $this->app->instance('App\Services\StatementStorageService', $mockService);
+
+        $statusCode = $this->artisan('lrs:send-all-statements');
+        $this->assertEquals(0, $statusCode);
+
         Storage::makeDirectory(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR .'example_e2');
 
-        $this->commandTester->execute([]);
+        $mockRepository = Mockery::mock(StatementRepository::class)->makePartial()
+            ->shouldReceive(['store' => true])
+            ->withAnyArgs()
+            ->getMock();
+        $this->app->instance('App\Http\Repositories\xapiRepositories\StatementRepository', $mockRepository);
 
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["Begin", 
-            "Directory " . HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'example_e1', 
-            "Backup succesfully created.",
-            "Data successfully sent.",
-            "Directory " . HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'example_e2', 
-            "this directory is empty"
-        ], $outputs);
+        $mockService = Mockery::mock(StatementStorageService::class)->makePartial()
+            ->shouldReceive(['storeBackup' => true, 'read' => true])
+            ->withAnyArgs()
+            ->getMock();
+        $this->app->instance('App\Services\StatementStorageService', $mockService);
+
+        $statusCode = $this->artisan('lrs:send-all-statements');
+        $this->assertEquals(0, $statusCode);
         
-        HelperTest::deleteTestingFolders();
     }
 
 }

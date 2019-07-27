@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use App\User;
+use App\Constants\Scope;
+use Laravel\Passport\Passport;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Dusterio\LumenPassport\LumenPassport;
 
 /**
  * @codeCoverageIgnore
@@ -32,6 +35,15 @@ class AuthServiceProvider extends ServiceProvider
         // application. The callback which receives the incoming request instance
         // should return either a User instance or null. You're free to obtain
         // the User instance via an API token or any other method necessary.
+
+        LumenPassport::routes($this->app);
+        Passport::tokensCan([
+            Scope::STATEMENTS_READ => 'Get own statement',
+            Scope::STATEMENTS_WRITE => 'Write statement of application',
+            Scope::LRS_READ => 'Get lrs infos',
+            Scope::LRS_WRITE => 'Create lrs application',
+            Scope::ALL => 'All permissions'
+        ]);
 
         $this->app['auth']->viaRequest('api', function ($request) {
             if ($request->input('api_token')) {
