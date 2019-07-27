@@ -3,7 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use App\User;
+use App\Models\OauthClient;
 use Illuminate\Http\Response;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 
@@ -39,7 +39,7 @@ class BasicAuthentication
     {
         $username = $request->getUser();
         $password = $request->getPassword();
-        $user = new User();   
+        $user = new OauthClient();
         
         if (!isset($username) || !$user->validateUser($username, $password)) {
             return response([
