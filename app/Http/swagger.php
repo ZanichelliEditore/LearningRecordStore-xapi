@@ -13,7 +13,7 @@
      *     ),
      * )
      * @OA\Server(
-     *     url=APP_URL,
+     *     url=APP_URL
      * )
      * 
      */
@@ -21,7 +21,15 @@
     /**
      * @OA\Tag(
      *     name="xAPI",
-     *     description="Service used to validate and store statements"
+     *     description="Service used to validate and store statements. @auth Basic Auth",
+     *     @OA\ExternalDocumentation(
+     *         description="Find out more",
+     *         url="https://github.com/adlnet/xAPI-Spec/blob/master/xAPI-Data.md#parttwo"
+     *     )
+     * ),
+     * @OA\Tag(
+     *     name="Lrs",
+     *     description="Service used to handle lrs applications. @auth Passport"
      * )
      *
     */
@@ -35,6 +43,25 @@
     *     scheme="basic"
     *  )
     */
+    /**
+     * @OA\SecurityScheme(
+     *     type="oauth2",
+     *     name="passport",
+     *     securityScheme="passport",
+     *     in="header",
+     *     scheme={"http","https"},
+     *     @OA\Flow(
+     *         flow="clientCredentials",
+     *         tokenUrl=SWAGGER_LUME_CONST_HOST,
+     *         scopes={
+     *             "all": "All permissions",
+     *             "lrs/read": "Get lrs infos",
+     *             "lrs/write": "Create or update lrs",
+     *             "statements/read": "Read statements"
+     *         }
+     *     )
+     *  )
+     */
 
     /**
      * @OA\Components(
@@ -108,6 +135,27 @@
      *             ref="#/components/schemas/Authority"
      *         )
      *     ),
+     *     @OA\Schema(
+     *         schema="Lrs",
+     *         type="object",
+     *         required={"title", "folder"},
+     *         @OA\Property(
+     *             property="title",
+     *             type="string",
+     *             example="Name application",
+     *             description="title to use for lrs."
+     *         ),
+     *         @OA\Property(
+     *             property="folder",
+     *             type="string",
+     *             example="application_lrs",
+     *             description="Folder you want to use in s3 where the data will be saved."
+     *         ),
+     *         @OA\Property(
+     *             property="description",
+     *             type="string"
+     *         )
+     *     ),
      *     @OA\Response(
      *         response="Error500",
      *         description="Internal Server Error"
@@ -137,6 +185,14 @@
      *             mediaType="application/json",
      *             @OA\Schema(ref="#/components/schemas/Message401")
      *         )
+     *     ),
+     *     @OA\Response(
+     *         response="Error403",
+     *         description="Access token does not have the required scope."
+     *     ),
+     *     @OA\Response(
+     *         response="Error404",
+     *         description="Error to execute the action, object not found."
      *     ),
      *     @OA\Response(
      *         response="Error422",

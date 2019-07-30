@@ -23,9 +23,11 @@ class AppServiceProvider extends ServiceProvider
 
         /*MAP SERVICES*/
         $this->app->bind('App\Services\StatementServiceInterface',   'App\Services\StatementStorageService.php');
+        $this->app->bind('App\Services\ClientServiceInterface',   'App\Services\ClientService');
 
         /** MAP REPOSITORIES */
-        $this->app->bind('App\Repositories\StatementRepositoryInterface', 'App\Repositories\StatementRepository');
+        $this->app->bind('App\Http\Repositories\xapiRepositories\StatementRepositoryInterface', 'App\Http\Repositories\xapiRepositories\StatementRepository');
+        $this->app->bind('App\Http\Repositories\RepositoryInterface', 'App\Http\Repositories\LrsRepository');
     }
 
     public function boot()

@@ -1,49 +1,68 @@
 <?php
 
 
-use Exception as Exc;
+use App\Models\Client;
+use Rhumsaa\Uuid\Uuid;
 use \Mockery as Mockery;
+use App\Constants\Scope;
+use App\Locker\LockerLrs;
+use App\Models\Authority;
+use \stdClass as stdClass;
 use App\Locker\HelperTest;
-use Illuminate\Http\Request;
 use function GuzzleHttp\json_decode;
-use App\Repositories\StatementRepository;
 use App\Services\StatementStorageService;
 use App\Http\Controllers\StatementController;
+use Laravel\Lumen\Testing\DatabaseMigrations;
+use App\Http\Repositories\xapiRepositories\StatementRepository;
 
-class PassportStatementTest extends TestCase
+abstract class StatementBaseCase extends TestCase
 {
+
+    use DatabaseMigrations;
+
+    /**
+     * A setup method launched at the beginning of test
+     *
+     * @return void
+    */
+    public function setup():void
+    {
+        parent::setUp();
+        $this->artisan('migrate');
+        $this->artisan('db:seed');
+
+        Client::where('api_basic_key', env('CLIENT_ID'))
+                ->update(['scopes'  => '["' . Scope::STATEMENTS_WRITE . '"]']);
+
+        Storage::fake('local');
+    }
+
+    /**
+     * A setup method launched at the end of test
+     *
+     * @return void
+    */
+    public function tearDown()
+    {
+        HelperTest::deleteTestingFolders();
+        $this->artisan('migrate:reset');
+        parent::tearDown();
+    }
+
     /**
      * creation class
      *
      * @return HelperTest
      */
-    private function  help()
+    public function  help()
     {
         $helper = new HelperTest();
         return $helper;
     }
 
-    /**
-    * Request oauth token
-    * @return  string
-    */
-    private function authentication()
-    {
-        $bodyParams = [
-            "client_id" => env("CLIENT_ID"),
-            "client_secret" => env("CLIENT_SECRET"),
-            "grant_type" => HelperTest::GRANT_TYPE
-        ];
-        $content = $this->call('POST', env("SWAGGER_LUME_CONST_HOST"), $bodyParams)->getContent();
-        $body = json_decode($content);
+    public abstract function authentication();
 
-        try {
-            $access_token = $body->access_token;
-        } catch (Exc $e) {
-            $access_token = '';
-        }
-        return $access_token;
-    }
+    public abstract function getRequest();
 
     /**
      * send statement in test
@@ -53,8 +72,16 @@ class PassportStatementTest extends TestCase
     */
     private function sendStatements($body)
     {
-        $header = $this->help()->createHeader($this->authentication());
-        return $this->call('POST', HelperTest::URL, $body, [], [], $header);
+        return $this->call('POST', HelperTest::URL, $body, [], [],  $this->authentication());
+    }
+
+    /**
+     * Create authority object
+     * @return Authority
+    */
+    private function getObjAuth() {
+        $object_auth = new Authority('Client', 'example@gmail.com');
+        return $object_auth;
     }
 
     /**
@@ -77,9 +104,10 @@ class PassportStatementTest extends TestCase
 
     /**
      * @param boolean $savingSuccess
+     * @param boolean $reading
      * @return Mockery\MockInterface $mock
      */
-    private function getMock(bool $savingSuccess = true, bool $reading = false)
+    public function getMock(bool $savingSuccess = true, bool $reading = false)
     {        
         $mock = $reading ? Mockery::mock(StatementStorageService::class) :
         Mockery::mock(StatementStorageService::class)
@@ -96,9 +124,11 @@ class PassportStatementTest extends TestCase
 
     /**
      * @param boolean $savingSuccess
+     * @param array|null $allSuccess
+     * @param string|null $findSuccess
      * @return Mockery\MockInterface $mock
      */
-    private function getMockRepo(bool $reading = false, $allSuccess = null, $findSuccess = null)
+    public function getMockRepo(bool $reading = false, $allSuccess = null, $findSuccess = null)
     {
         $mock = !$reading ? Mockery::mock(StatementRepository::class) : 
         Mockery::mock(StatementRepository::class)
@@ -109,7 +139,36 @@ class PassportStatementTest extends TestCase
             ])        
             ->withAnyArgs()
             ->getMock();
-        $this->app->instance('App\Repositories\StatementRepository', $mock);
+        $this->app->instance('App\Http\Repositories\xapiRepositories\StatementRepository', $mock);
+        return $mock;
+    }
+
+    /**
+     * @param boolean $savingSuccess
+     * @param boolean $reading
+     * @return Mockery\MockInterface $mock
+     */
+    public function getMockLocker(array $classes = [])
+    {        
+        $object_lrs = new stdClass;
+        $object_lrs->folder = 'test';
+        $object_lrs->_id = 'object_id';
+        
+        $mocked = [
+            'getLrsFromAuth' => $object_lrs,
+            'getAuthorityFromAuth' => $this->getObjAuth(),
+            'getClientId' => 'clientId'
+        ];
+        $classes =  !empty($classes) ? $classes : $mocked;   
+
+        $classesMocked = array_intersect_key($mocked, $classes);
+        $mock = Mockery::mock(LockerLrs::class)
+            ->makePartial()
+            ->shouldReceive($classesMocked)        
+            ->withAnyArgs()
+            ->once()
+            ->getMock();
+        $this->app->instance('App\Locker\LockerLrs', $mock);
         return $mock;
     }
 
@@ -120,9 +179,65 @@ class PassportStatementTest extends TestCase
     public function statementErrorAuthenticationTest()
     {
         $helper   = $this->help();
-        $header = $helper->createHeader('test');
+        $header = [];
         $response = $this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], $header);
         $this->assertEquals(401, $response->status());
+    }
+
+
+    /**
+     * @test
+     * @return void
+     */
+    public function statementScopesFailTest()
+    {
+
+        Client::where('api_basic_key', env('CLIENT_ID'))
+                ->update(['scopes'  => '["fail_test"]']);
+
+        $helper   = $this->help();
+        $response = $this->call('GET', HelperTest::URL, $helper->getStatement(), [], [], $this->authentication());
+
+        $this->assertEquals(403, $response->status());
+    }
+
+    /**
+     * @test
+     * @return voidfolder
+     */
+    public function statementScopesSuccessTest()
+    {
+ 
+        $helper   = $this->help();
+
+        $response = $this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], $this->authentication());
+        $this->assertEquals(200, $response->status());
+
+        Client::where('api_basic_key', env('CLIENT_ID'))
+                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
+
+        $response = $this->call('GET', HelperTest::URL, [], [], [], $this->authentication());
+        $this->assertEquals(200, $response->status());
+    }
+
+    /**
+     * @test
+     * @return void
+     */
+    public function statementScopesAllTest()
+    {
+
+        Client::where('api_basic_key', env('CLIENT_ID'))
+                ->update(['scopes'  => '["' . Scope::ALL . '"]']);
+
+        $helper   = $this->help();
+
+        $response = $this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], $this->authentication());
+        $this->assertEquals(200, $response->status());
+
+        $response = $this->call('GET', HelperTest::URL, [], [], [], $this->authentication());
+        $this->assertEquals(200, $response->status());
+
     }
 
      /**
@@ -131,11 +246,48 @@ class PassportStatementTest extends TestCase
      */
     public function statementPostSuccessTest()
     {
-        $statementRequest = new Request();        
-        $statementController = new StatementController($this->getMock(), $this->getMockRepo());
-
+        $statementRequest = $this->getRequest();
+        $statementController = new StatementController($this->getMock(), $this->getMockRepo(), $this->getMockLocker());
         $statementRequest->replace($this->help()->getStatement());
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
+
+        $response = $statementController->store($statementRequest);
+
+        $this->assertEquals(200, $response->status());
+    }
+
+     /**
+     * @test
+     * @return void
+     */
+    public function baseStatementPostSuccessTest()
+    {
+
+        $statement = $this->help()->getStatement();
+        unset($statement['context']);
+        unset($statement['result']);
+        unset($statement['version']);
+        unset($statement['timestamp']);
+        unset($statement['authority']);
+        unset($statement['actor']['name']);
+        unset($statement['verb']['display']);
+        unset($statement['object']['definition']);
+
+        $response = $this->sendStatements($statement);
+        $this->assertEquals(200, $response->status());
+    }
+
+    /**
+     * @test
+     * @return void
+     */
+    public function statementsPostSuccessTest()
+    {
+
+        $statementRequest = $this->getRequest();        
+        $statementController = new StatementController($this->getMock(), $this->getMockRepo(), $this->getMockLocker());
+        $helper = $this->help();
+        $statementRequest->replace([$helper->getStatement(), $helper->getStatement()]);
+        
         $response = $statementController->store($statementRequest);
         $this->assertEquals(200, $response->status());
     }
@@ -144,13 +296,32 @@ class PassportStatementTest extends TestCase
      * @test
      * @return void
      */
+    public function statementSuccessIdFileTest()
+    {
+        $statementRequest = $this->getRequest();        
+        $statementController = new StatementController($this->getMock(), $this->getMockRepo(),$this->getMockLocker());
+        $uid = (string) Uuid::uuid1();
+        $statementRequest->replace($this->help()->getStatementWithUuid($uid));
+
+        $response = $statementController->store($statementRequest);
+        $uidFile = json_decode($response->getContent())[0];
+        $this->assertEquals($uid, $uidFile);
+    }
+
+     /**
+     * @test
+     * @return void
+     */
     public function statementReadAllSuccessTest()
     {      
-        $statementRequest = new Request();
-        $statement = array(0 => $this->help()->getStatement());
-        $statementController = new StatementController($this->getMock(true, true), $this->getMockRepo(true, $statement));
+        Client::where('api_basic_key', env('CLIENT_ID'))
+                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
+        
+        $statementRequest = $this->getRequest();
+        $statement = array(0 => $this->help()->getStatement());
+        $statementController = new StatementController($this->getMock(true, true), $this->getMockRepo(true, $statement), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
+        
         $response = $statementController->getList($statementRequest);
         $this->assertEquals(200, $response->status());
     }
@@ -160,12 +331,14 @@ class PassportStatementTest extends TestCase
      * @return void
      */
     public function statementReadSuccessTest()
-    {      
-        $statementRequest = new Request();        
-        $statementController = new StatementController($this->getMock(true, true),  $this->getMockRepo(true, null, $this->help()->getStatement()));
-        $id = 'fc371b5e-6359-11e9-bef6-00796d2beas';
+    {
+        Client::where('api_basic_key', env('CLIENT_ID'))
+                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
+        $id = (string) Uuid::uuid1();
+        $statementRequest = $this->getRequest();        
+        $statementController = new StatementController($this->getMock(true, true),  $this->getMockRepo(true, null, $this->help()->getStatementWithUuid($id)), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));        
+
         $response = $statementController->get($statementRequest, $id);
         $this->assertEquals(200, $response->status());
     }
@@ -176,10 +349,12 @@ class PassportStatementTest extends TestCase
      */
     public function statementReadAllEmptyTest()
     {      
-        $statementRequest = new Request();      
-        $statementController = new StatementController($this->getMock(true, true), $this->getMockRepo(true, null));
+        Client::where('api_basic_key', env('CLIENT_ID'))
+                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
+        $statementRequest = $this->getRequest();     
+        $statementController = new StatementController($this->getMock(true, true), $this->getMockRepo(true, null), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
+
         $response = $statementController->getList($statementRequest);
         $this->assertEquals(204, $response->status());
     }
@@ -190,51 +365,15 @@ class PassportStatementTest extends TestCase
      */
     public function statementReadEmptyTest()
     {      
-        $statementRequest = new Request();        
-        $statementController = new StatementController($this->getMock(true, true),  $this->getMockRepo(true, null, null));
-        $id = 'fc371b5e-6359-11e9-bef6-00796d2beas';
+        Client::where('api_basic_key', env('CLIENT_ID'))
+                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
+        $statementRequest = $this->getRequest();
+        $statementController = new StatementController($this->getMock(true, true),  $this->getMockRepo(true, null, null), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
+        $id = (string) Uuid::uuid1();
+
         $response = $statementController->get($statementRequest, $id);
         $this->assertEquals(204, $response->status());
-    }
-
-     /**
-     * @test
-     * @return void
-     */
-    public function baseStatementPostSuccessTest()
-    {
-        $statementRequest = new Request();        
-        $statementController = new StatementController($this->getMock(), $this->getMockRepo());
-        $statement = $this->help()->getStatement();
-        unset($statement['context']);
-        unset($statement['result']);
-        unset($statement['version']);
-        unset($statement['timestamp']);
-        unset($statement['authority']);
-        unset($statement['actor']['name']);
-        unset($statement['verb']['display']);
-        unset($statement['object']['definition']);
-        $statementRequest->replace($statement);
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
-        $response = $statementController->store($statementRequest);
-        $this->assertEquals(200, $response->status());
-    }
-
-    /**
-     * @test
-     * @return void
-     */
-    public function statementsPostSuccessTest()
-    {
-        $statementRequest = new Request();        
-        $statementController = new StatementController($this->getMock(), $this->getMockRepo());
-        $helper = $this->help();
-        $statementRequest->replace([$helper->getStatement(), $helper->getStatement()]);
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
-        $response = $statementController->store($statementRequest);
-        $this->assertEquals(200, $response->status());
     }
 
     /**
@@ -705,12 +844,7 @@ class PassportStatementTest extends TestCase
      */
     public function statementsPostSubstatementSuccessTest()
     {   
-        $statementRequest = new Request();        
-        $statementController = new StatementController($this->getMock(), $this->getMockRepo());
-
-        $statementRequest->replace($this->help()->getStatementWithSubstatement());
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
-        $response = $statementController->store($statementRequest);
+        $response = $this->sendStatements($this->help()->getStatementWithSubstatement());
         $this->assertEquals(200, $response->status());
     }
 
@@ -721,12 +855,8 @@ class PassportStatementTest extends TestCase
      */
     public function statementsFailedStoringTest()
     {   
-        $statementRequest = new Request();        
-        $statementController = new StatementController($this->getMock(false), $this->getMockRepo());
-
-        $statementRequest->replace($this->help()->getStatementWithSubstatement());
-        $statementRequest->headers->set('Authorization', HelperTest::HEADER_AUTH_TYPE . ' ' . $this->authentication());
-        $response = $statementController->store($statementRequest);
+        $statementController = new StatementController($this->getMock(false), $this->getMockRepo(), $this->getMockLocker());
+        $response = $this->sendStatements($this->help()->getStatementWithSubstatement());
         $this->assertEquals(500, $response->status());
     }
 

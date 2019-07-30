@@ -11,7 +11,7 @@
     <testsuites>
         <testsuite name="tests">
             <directory suffix="Test.php">./tests</directory>
-            <exclude>./tests/Passport</exclude>
+            <exclude>./tests/xAPI/Passport</exclude>
         </testsuite>
         
     </testsuites>
@@ -27,5 +27,7 @@
         <env name="STORAGE_PATH" value="/testing/statements" />
         <env name="STORAGE_BACKUP_PATH" value="/testing/backup_statements" />
         <env name="AWS_PATH_PREFIX" value="lrs_test/phpunit_testing/" />
+        <env name="CLIENT_ID" value="85834ea3f1150032809f16ab1d4ec194b1ec8608" />
+        <env name="CLIENT_SECRET" value="PxEr4aRcHs4Tnfz7BatQqVoovCqSxXbqXKcmeJom" />
     </php>
 </phpunit>

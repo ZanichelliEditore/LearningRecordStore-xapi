@@ -27,10 +27,15 @@ $app->withFacades();
 
 $app->withEloquent();
 
+// This is an issue in Lumen where the UrlGenerator contract has not been bound to any instance, so you'll have to do it manually.
+$app->bind(\Illuminate\Contracts\Routing\UrlGenerator::class, function ($app) {
+    return new \Laravel\Lumen\Routing\UrlGenerator($app);
+});
+
 // Load auth config files
 $app->configure('auth');
 
-
+// Load swagger config file
 $app->configure('swagger-lume');
 
 /*
@@ -77,7 +82,9 @@ $app->singleton('filesystem', function ($app) {
  $app->routeMiddleware([
     'auth' => App\Http\Middleware\Authenticate::class,
     'auth.basic' => App\Http\Middleware\BasicAuthentication::class,
-    'client_credentials' => App\Http\Middleware\ClientCredentials::class
+    'client_credentials' => App\Http\Middleware\ClientCredentials::class,
+    'check_scopes' => App\Http\Middleware\CheckScopes::class
+
  ]);
 
 /*

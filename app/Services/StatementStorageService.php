@@ -67,6 +67,7 @@ class StatementStorageService implements StatementServiceInterface
      * @return string
      */
     public function read(string $folder, $delete = true, $backup = false) {
+
         $content = '';
         $path = !$backup ? $this->baseStorageUrl . DIRECTORY_SEPARATOR . $folder : $this->backupStorageUrl . DIRECTORY_SEPARATOR . $folder;
         
@@ -84,6 +85,7 @@ class StatementStorageService implements StatementServiceInterface
                 Storage::delete($file);
             }
         }   
+        
         if (empty($content)) {
             return null;
         }

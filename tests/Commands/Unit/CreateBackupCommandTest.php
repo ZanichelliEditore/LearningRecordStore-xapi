@@ -1,46 +1,13 @@
 <?php
 
+use \Mockery as Mockery;
 use App\Locker\HelperTest;
+use App\Services\StatementStorageService;
 use App\Console\Commands\CreateFileBackup;
-use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\Console\Application as ConsoleApplication;
 
 
 class CreateBackupCommandTest extends TestCase
 {
-    private $command;
-    private $commandTester;
-
-    /**
-     * creation class
-     *
-     * @return HelperTest
-     */
-    private function  help()
-    {
-        $helper = new HelperTest();
-        return $helper;
-    }
-
-    /**
-     * Set up test variables and environment
-     *
-     * @return void
-     */
-    public function setUp()
-    {
-        parent::setUp();
-
-        $application = new ConsoleApplication();
-
-        $testedCommand = $this->app->make(CreateFileBackup::class);
-        $testedCommand->setLaravel(app());
-        $application->add($testedCommand);
-
-        $this->command = $application->find('lrs:create-file');
-
-        $this->commandTester = new CommandTester($this->command);
-    }
 
     /** 
      * @test
@@ -49,13 +16,11 @@ class CreateBackupCommandTest extends TestCase
     public function noFolderGivenTest()
     {
         Storage::fake('local');
-        $this->commandTester->execute([
-            '--folder' => '',
-        ]);
 
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["The folder is required"], $outputs);
-        $this->assertEquals(false, $this->commandTester->getStatusCode());
+        $statusCode = $this->artisan('lrs:create-file', [
+            '--folder'  => ''
+        ]);
+        $this->assertEquals(1, $statusCode);
     }
 
     /** 
@@ -65,12 +30,11 @@ class CreateBackupCommandTest extends TestCase
     public function unrealFolderTest()
     {
         Storage::fake('local');
-        $this->commandTester->execute([
-            '--folder'  => 'e839hje3i3',
-        ]);
 
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["Begin", "The given folder does not exists"], $outputs);
+        $statusCode = $this->artisan('lrs:create-file', [
+            '--folder'  => 'e839hje3i3'
+        ]);
+        $this->assertEquals(1, $statusCode);
     }
 
     /** 
@@ -80,17 +44,18 @@ class CreateBackupCommandTest extends TestCase
     public function successCaseTest()
     {
         Storage::fake('local');
-        $statement = json_encode($this->help()->getStatementWithSubstatement(), JSON_UNESCAPED_SLASHES);
-
         Storage::makeDirectory(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'example_e1');
-        Storage::put(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR .'example_e1' . DIRECTORY_SEPARATOR . 'example.json', $statement);
 
-        $this->commandTester->execute([
-            '--folder' => 'example_e1',
+        $mockService = Mockery::mock(StatementStorageService::class)->makePartial()
+            ->shouldReceive(['storeBackup' => true, 'read' => true])
+            ->withAnyArgs()
+            ->once()
+            ->getMock();
+        $this->app->instance('App\Services\StatementStorageService', $mockService);
+        
+        $statusCode = $this->artisan('lrs:create-file', [
+            '--folder'  => 'example_e1'
         ]);
-
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["Begin", "File created"], $outputs);
-        HelperTest::deleteTestingFolders();
+        $this->assertEquals(0, $statusCode);
     }
 }

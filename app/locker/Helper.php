@@ -11,12 +11,12 @@ class Helper
      * @param string $message
      * @return Response
      */
-    static function getResponse($message, $code = null)
+    static function getResponse($message, $code = null, $success = false)
     {
         $code = $code ?: \Illuminate\Http\Response::HTTP_BAD_REQUEST;
         $content = [
-            "error" => true,
-            "success" => false,
+            "error" => !$success,
+            "success" => $success,
             "message" => [$message],
             "code" => $code
         ];

@@ -3,34 +3,10 @@
 use App\Locker\HelperTest;
 use Illuminate\Support\Facades\Storage;
 use App\Console\Commands\DeleteDirectory;
-use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\Console\Application as ConsoleApplication;
 
 
 class DeletingDirectoryCommandTest extends TestCase
 {
-    private $command;
-    private $commandTester;
-
-    /**
-     * Set up test variables and environment
-     *
-     * @return void
-     */
-    public function setUp()
-    {
-        parent::setUp();
-
-        $application = new ConsoleApplication();
-
-        $testedCommand = $this->app->make(DeleteDirectory::class);
-        $testedCommand->setLaravel(app());
-        $application->add($testedCommand);
-
-        $this->command = $application->find('lrs:delete-directory');
-
-        $this->commandTester = new CommandTester($this->command);
-    }
 
     /** 
      * @test
@@ -39,12 +15,11 @@ class DeletingDirectoryCommandTest extends TestCase
     public function noFolderGivenTest()
     {
         Storage::fake('local');
-        $this->commandTester->execute([
-            '--folder' => '',
-        ]);
 
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["The folder is required"], $outputs);
+        $statusCode = $this->artisan('lrs:delete-directory', [
+            '--folder'  => ''
+        ]);
+        $this->assertEquals(1, $statusCode);
     }
 
     /** 
@@ -54,12 +29,11 @@ class DeletingDirectoryCommandTest extends TestCase
     public function unrealFolderTest()
     {
         Storage::fake('local');
-        $this->commandTester->execute([
-            '--folder'  => 'e839hje3i3',
-        ]);
 
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["No directory found with the given name"], $outputs);
+        $statusCode = $this->artisan('lrs:delete-directory', [
+            '--folder'  => 'e839hje3i3'
+        ]);
+        $this->assertEquals(1, $statusCode);
     }
 
 
@@ -72,14 +46,12 @@ class DeletingDirectoryCommandTest extends TestCase
         Storage::fake('local');
         Storage::makeDirectory(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'example_e2');
 
-        $this->commandTester->execute([
-            '--folder'  => 'example_e2',
+        $statusCode = $this->artisan('lrs:delete-directory', [
+            '--folder'  => 'example_e2'
         ]);
-
-        $outputs = explode(PHP_EOL, $this->commandTester->getDisplay());        
-        $this->assertArraySubset(["Begin", "Directory deleted successfully"], $outputs);
         
-        HelperTest::deleteTestingFolders();
+        $this->assertFalse(Storage::exists(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'example_e2')==1?true:false);
+        $this->assertEquals(0, $statusCode);
     }
 
 }

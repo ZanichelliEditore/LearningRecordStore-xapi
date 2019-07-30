@@ -102,6 +102,8 @@ There is the possibility to change it and switch to an **Oauth2** authentication
 ### Launch Passport Test
 If you decided to change authentication type then you have to change the tests that will be launched.
 
-In *phpunit.xml* file, inside `testsuite` tag change the path exclude from *`./tests/Passport`* to *`./tests/BasicAuth`*
+In *phpunit.xml* file, inside `testsuite` tag change the path exclude from *`./tests/xAPI/Passport`* to *`./tests/xAPI/BasicAuth`*.
+
+When you add or modify tests classes launch **composer dump-autoload** inside the container.
 
 Then change also the security schema defined in swagger.php and in the controllers.

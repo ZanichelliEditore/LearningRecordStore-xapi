@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repositories;
+namespace App\Http\Repositories\xapiRepositories;
 
 use App\Models\Link;
 use App\Models\Meta;
@@ -44,6 +44,7 @@ class StatementRepository implements StatementRepositoryInterface
             'Key'    => env('AWS_PATH_PREFIX', '') . $folder . DIRECTORY_SEPARATOR . $keyname . '.json',
             'Body'   => $statements
         ]);
+
         return $object['@metadata']['statusCode'] === 200;
     }
 
@@ -61,7 +62,7 @@ class StatementRepository implements StatementRepositoryInterface
 
         try {
             $content = $this->statementService->read($folder, $delete = false);
-            $contentBackup = $this->statementService->read($folder, $delete = false, $backup = true);          
+            $contentBackup = $this->statementService->read($folder, $delete = false, $backup = true);     
         } catch (StorageException $e) { 
             return null;
         }
@@ -73,7 +74,7 @@ class StatementRepository implements StatementRepositoryInterface
         } elseif (!$contentBackup) {
             $merge = json_decode($content);
         } else {
-            $merge = array_merge(json_decode($content), json_decode($contentBackup)[0]);
+            $merge = array_merge(json_decode($content), json_decode($contentBackup));
         }
 
         if (isset($verb)) {
