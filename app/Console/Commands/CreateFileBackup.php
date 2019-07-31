@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Services\StatementStorageService;
 
@@ -37,38 +38,40 @@ class CreateFileBackup extends Command
      *
      * @return mixed
      */
-    public function handle()
+    public function handle(StatementStorageService $statementService)
     {
-        $this->statementService = new StatementStorageService;
 
         if (!$this->option('folder')) {
             $this->error("The folder is required");
-            return false;
+            return 1;
         }
 
         $folder = (string) $this->option('folder');
-        $filePath = env('STORAGE_PATH','') . DIRECTORY_SEPARATOR .$folder;
+        $filePath = env('STORAGE_PATH','') . DIRECTORY_SEPARATOR . $folder;
 
         try {
-            $this->info("Begin");
 
+            $this->info("Begin");
             if (!Storage::exists($filePath)) {
                 $this->error("The given folder does not exists");
-                return;
+                return 1;
             }
             
-            $content = $this->statementService->read($folder);
+            $content = $statementService->read($folder);
             if (empty($content)) {
                 $this->warn("The given folder is empty");
-                return;
+                return 0;
             }
-            $this->statementService->storeBackup($content, $folder);
-
+            $statementService->storeBackup($content, $folder);
             $this->info("File created");
+
         } catch (Exception $e) {
             $message = ($this->option('v')) ? ': ' . $e->getMessage() : ', please add --v for more details';
             $this->error("An error occurred" . $message);            
+            Log::info($e->getMessage());
+            return 1;
         }
+        return 0;
     
     }
 }

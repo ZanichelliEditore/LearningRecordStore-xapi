@@ -4,9 +4,10 @@ namespace App\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
-use App\Services\StatementStorageService;
-use App\Repositories\StatementRepository;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Repositories\xapiRepositories\StatementRepository;
+use App\Services\StatementStorageService;
 
 
 
@@ -30,7 +31,7 @@ class SendAllDirectoriesFiles extends Command
      *
      * @var string
      */
-    protected $description = "Send statements from all the current folders. Each file sent is deleted automatically.";
+    protected $description = "Send statements from all the current folders.\n Each file sent is deleted automatically.";
 
 
     /**
@@ -38,20 +39,18 @@ class SendAllDirectoriesFiles extends Command
      *
      * @return mixed
      */
-    public function handle() {
+    public function handle(StatementRepository $statementRepository, StatementStorageService $statementService)
+    {
         $path = env('STORAGE_PATH');
-
-        $statementRepository = new StatementRepository();
-        $statementService    = new StatementStorageService();
         
         try{
             $this->info("Begin");
-            
+
             foreach (Storage::directories($path) as $relativePathDirectory) {
                 $this->info("Directory " . DIRECTORY_SEPARATOR . $relativePathDirectory);
                 $splittedPath = explode(DIRECTORY_SEPARATOR, $relativePathDirectory);
                 $folder = $splittedPath[count($splittedPath)-1];
-
+                
                 $content = $statementService->read($folder);
 
                 if (empty($content)) {
@@ -62,12 +61,17 @@ class SendAllDirectoriesFiles extends Command
                 $statementService->storeBackup($content, $folder);
                 $this->info("Backup succesfully created.");
                 $statementRepository->store($content, $folder);
-                $this->info("Data successfully sent.");                
+                $this->info("Data successfully sent.");      
             }
         } catch (Exception $e) {
             $message = ($this->option('v')) ? ': ' . $e->getMessage() : ', please add --v for more details';
-            $this->error("An error occurred" . $message);            
+            $this->error("An error occurred" . $message);
+            Log::info($e->getMessage());
+            return 1;      
         }
         $this->info("Directories successfully inspected");
+        return 0;
+        
     }
+    
 }

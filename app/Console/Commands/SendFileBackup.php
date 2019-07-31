@@ -4,8 +4,9 @@ namespace App\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
-use App\Repositories\StatementRepository;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Repositories\xapiRepositories\StatementRepository;
 
 
 
@@ -38,20 +39,19 @@ class SendFileBackup extends Command
      *
      * @return mixed
      */
-    public function handle()
+    public function handle(StatementRepository $statementRepository)
     {
-        $this->statementRepository = new StatementRepository;
         
         if (!$this->option('folder')) {
             $this->error("The folder is required");
-            return false;
+            return 1;
         }
         $path = env('STORAGE_BACKUP_PATH', '');
         $folder = (string) $this->option('folder');
 
-        if (!Storage::exists($path. DIRECTORY_SEPARATOR  . $folder)) {
+        if (!Storage::exists($path . DIRECTORY_SEPARATOR  . $folder)) {
             $this->warn("No directory found with the given name: cannot read from an unreal folder");
-            return;
+            return 1;
         }
 
         try {
@@ -60,20 +60,23 @@ class SendFileBackup extends Command
 
             if (empty($files)) {
                 $this->warn('The given folder is empty');
-                return;
+                return 0;
             }
 
             foreach ($files as $file) {
                 $content = Storage::disk('local')->get($file);
-                $this->statementRepository->store($content, $folder);
+                $statementRepository->store($content, $folder);
                 $this->info(DIRECTORY_SEPARATOR . $file . ' sent');
                 Storage::delete($file);
-            }   
+            }
             
         } catch (Exception $e) {
             $message = ($this->option('v')) ? ': ' . $e->getMessage() : ', please add --v for more details';
-            $this->error("An error occurred" . $message);            
+            $this->error("An error occurred" . $message);
+            Log::info($e->getMessage());
+            return 1;        
         }
+        return 0;
     
     }
 }

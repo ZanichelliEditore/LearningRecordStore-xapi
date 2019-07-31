@@ -1,8 +1,8 @@
-FROM php:7-fpm
+FROM php:7.2-fpm
 
 ARG USER
 
-RUN apt-get update &&  apt-get install -y libmcrypt-dev mysql-client openssl zip unzip git libpng-dev libjpeg62-turbo-dev libgd-dev  apt-utils \
+RUN apt-get update &&  apt-get install -y libmcrypt-dev mariadb-client openssl zip unzip git libpng-dev libjpeg62-turbo-dev libgd-dev  apt-utils \
     && docker-php-ext-install pdo_mysql \
     && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
     && docker-php-ext-install gd \

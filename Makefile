@@ -23,7 +23,7 @@ composer_update:                  ## Execute composer update
 	docker exec $(PROJECT)_app composer update
 run_tests:                        ## Execute phpunit
 	docker exec $(PROJECT)_app vendor/bin/phpunit
-run_tests_coverage:                        ## Execute phpunit
+run_tests_coverage:               ## Execute coverage phpunit
 	docker exec $(PROJECT)_app vendor/bin/phpunit --coverage-html tmp/coverage
 
 .DEFAULT_GOAL := help
