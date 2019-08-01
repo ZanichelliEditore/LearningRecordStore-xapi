@@ -17,6 +17,7 @@ services:
       dockerfile: app-dev.dockerfile
       args:
         - USER=${USER}
+        - UID=${UID}
     container_name: lrs_app
     volumes:
       - ./:/var/www
