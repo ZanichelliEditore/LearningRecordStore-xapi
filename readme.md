@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/ZanichelliEditore/LearningRecordStore-xapi.svg?branch=travisCI)](https://travis-ci.org/ZanichelliEditore/LearningRecordStore-xapi)
+[![codecov](https://codecov.io/gh/ZanichelliEditore/LearningRecordStore-xapi/branch/travisCI/graph/badge.svg)](https://codecov.io/gh/ZanichelliEditore/LearningRecordStore-xapi)
+
+
 # About the project
 
 An LRS implementing the xAPI to send data to AWS S3 storage.
