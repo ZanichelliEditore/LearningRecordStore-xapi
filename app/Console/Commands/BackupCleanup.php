@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -19,7 +20,7 @@ class BackupCleanup extends Command
      *
      * @var string
      */
-    protected $signature = "lrs:backup-cleanup {--folder=} {--v}";
+    protected $signature = "lrs:backup-cleanup {--folder=  : The folder backup to delete} {--v}";
 
     /**
      * The console command description.
@@ -39,7 +40,7 @@ class BackupCleanup extends Command
         $path = env('STORAGE_BACKUP_PATH');
         
         if ($this->option('folder')) {
-            $folders = [$path.DIRECTORY_SEPARATOR.$this->option('folder')];
+            $folders = [$path . DIRECTORY_SEPARATOR . $this->option('folder')];
             
             if (!Storage::exists($folders[0])) {
                 $this->warn("No directory found with the given name");
@@ -60,13 +61,14 @@ class BackupCleanup extends Command
                 foreach (Storage::files($folder) as $file) {
                     if (Storage::lastModified($file) <= $timeLimit) {
                         Storage::delete($file);
-                        $this->info('File '.$file.' deleted');
+                        $this->info('File ' . $file . ' deleted');
                     }
                 }
-            }     
+            }
         } catch (Exception $e) {
             $message = ($this->option('v')) ? ': ' . $e->getMessage() : ', please add --v for more details';
             $this->error("An error occurred" . $message);
+            Log::info($e->getMessage());
             return 1;
         }
         $this->info('Backup data cleaned up succesfully.');

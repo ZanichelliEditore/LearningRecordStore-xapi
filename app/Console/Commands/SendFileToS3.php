@@ -4,9 +4,10 @@ namespace App\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Repositories\xapiRepositories\StatementRepository;
 use App\Services\StatementStorageService;
-use App\Repositories\StatementRepository;
 
 
 /**
@@ -38,39 +39,40 @@ class SendFileToS3 extends Command
      *
      * @return mixed
      */
-    public function handle()
+    public function handle(StatementRepository $statementRepository, StatementStorageService $statementService)
     {
-        $this->statementRepository = new StatementRepository;
-        $this->statementService = new StatementStorageService;
-        
+
         if (!$this->option('folder')) {
             $this->error("The folder is required");
-            return false;
+            return 1;
         }
         $folder = (string) $this->option('folder');
         $filePath = env('STORAGE_PATH','').DIRECTORY_SEPARATOR.$folder;
 
         if (!Storage::exists($filePath)) {
             $this->warn("No directory found with the given name: cannot read from an unreal folder");
-            return;
+            return 1;
         }
 
         try {
             $this->info("Begin");
-
-            $content = $this->statementService->read($folder);
+            $content = $statementService->read($folder);
             if (empty($content)) {
                 $this->warn("The given folder is empty, no statement found");
-                return;
+                return 0;
             }
-            $this->statementService->storeBackup($content, $folder);
-            $this->statementRepository->store($content, $folder);
+
+            $statementService->storeBackup($content, $folder);
+            $statementRepository->store($content, $folder);
 
             $this->info("File successfully sent");
         } catch (Exception $e) {
             $message = ($this->option('v')) ? ': ' . $e->getMessage() : ', please add --v for more details';
-            $this->error("An error occurred" . $message);            
+            $this->error("An error occurred" . $message);
+            Log::info($e->getMessage());
+            return 1; 
         }
+        return 0;
     
     }
 }

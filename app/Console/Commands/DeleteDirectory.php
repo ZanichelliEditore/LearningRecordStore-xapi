@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -38,25 +39,29 @@ class DeleteDirectory extends Command
     {
         if (!$this->option('folder')) {
             $this->error("The folder is required");
-            return false;
+            return 1;
         }
 
         $folder   = (string) $this->option('folder');
         $filePath = env('STORAGE_PATH','').DIRECTORY_SEPARATOR.$folder;
         if (!Storage::exists($filePath)) {
             $this->warn("No directory found with the given name");
-            return;
+            return 1;
         }
         
         try {
+
             $this->info("Begin");
             Storage::deleteDirectory($filePath); 
-
             $this->info("Directory deleted successfully");
+
         } catch (Exception $e) {
             $message = ($this->option('v')) ? ': '.$e->getMessage() : ', please add --v for more details';
-            $this->error("An error occurred". $message);            
+            $this->error("An error occurred". $message);
+            Log::info($e->getMessage());
+            return 1;        
         }
+        return 0;
     
     }
 }

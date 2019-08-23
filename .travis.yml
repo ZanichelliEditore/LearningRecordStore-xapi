@@ -1,0 +1,24 @@
+language: php
+
+php:
+    - 7.2
+
+services:
+  - docker
+
+before_script:
+    - cp .env.example .env
+    - export UID
+    - docker-compose -f docker-compose.dev.yml up --build -d
+    - docker exec -it lrs_app id
+    - docker exec -it lrs_app composer install
+    - docker exec -it lrs_app php artisan key:generate
+    - docker exec -it lrs_app bash -c "php artisan migrate --seed --no-interaction"
+    - docker exec -it lrs_app bash -c "php artisan passport:install"
+
+script:
+    - docker exec -it lrs_app bash -c "vendor/bin/phpunit --coverage-clover=coverage.xml"
+
+after_success:
+    - bash <(curl -s https://codecov.io/bash) -t cc056f3e-8bf3-45cc-ac7d-66b76d269173
+
