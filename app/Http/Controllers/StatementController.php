@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
 use App\Locker\Helper;
 use App\Locker\LockerLrs;
 use App\Models\Statement;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\XapiValidator;
+use Illuminate\Support\Facades\Storage;
 use App\Services\StatementStorageService;
 use App\Http\Repositories\xapiRepositories\StatementRepositoryInterface;
 
 class StatementController extends Controller
 {
-    protected $statementRepository; 
+    protected $statementRepository;
     protected $statementService;
 
     public function __construct(StatementStorageService $statementService, StatementRepositoryInterface $statementRepository, LockerLrs $locker)
@@ -23,7 +22,7 @@ class StatementController extends Controller
         $this->statementRepository = $statementRepository;
         $this->locker = $locker;
     }
-    
+
     /**
      * @OA\Post(
      *     path="/data/xAPI/statements",
@@ -48,6 +47,10 @@ class StatementController extends Controller
      *         ref="#/components/responses/Error400"
      *     ),
      *     @OA\Response(
+     *         response=401,
+     *         ref="#/components/responses/Error401"
+     *     ),
+     *     @OA\Response(
      *         response=403,
      *         ref="#/components/responses/Error403"
      *     ),
@@ -69,7 +72,7 @@ class StatementController extends Controller
         $xapiValidator = new XapiValidator();
         $statementIds = [];
         $computedStatement = [];
-        $lrs = $this->locker::getLrsFromAuth($request);        
+        $lrs = $this->locker::getLrsFromAuth($request);
         $authority = $this->locker::getAuthorityFromAuth($request);
         $clientId = $this->locker::getClientId($request);
         $folder = $lrs->folder;
@@ -79,9 +82,9 @@ class StatementController extends Controller
             if (isset($error)) {
                 return $error;
             }
-            
+
             $statement = $request;
-            $statementIds = $xapiValidator->validateStatement($request, $statement, $authority);           
+            $statementIds = $xapiValidator->validateStatement($request, $statement, $authority);
 
             if (!is_string($statementIds)) {
                 return $statementIds;
@@ -92,7 +95,7 @@ class StatementController extends Controller
                 'client_id' => $clientId,
                 'statement' => $statement->all()
             ];
-        }        
+        }
         $statementIds = (array) $statementIds;
 
         for ($i = 0; $request->input($i); $i++) {
@@ -121,13 +124,13 @@ class StatementController extends Controller
             $statementIds[] = $validateResponse;
         }
 
-        try {
-            if (!$this->statementService->store($computedStatement, $folder)) {
-                return Helper::getResponse('Storage access exception: an internal error occurred while adding a new statements file to the proper path', 500);
-            }
-        } catch(Exception $e) {
-            Log::error($e->getMessage());
-            return Helper::getResponse($e->getMessage(), $e->getCode());
+        for ($i = 0; $i < count($computedStatement); $i++) {
+            if (!$this->statementService->store($computedStatement[$i], $folder)) {
+                foreach (range(0, $i) as $ele) {
+                    Storage::delete(env('STORAGE_PATH', '') . DIRECTORY_SEPARATOR . $folder . DIRECTORY_SEPARATOR . $statementIds[$ele] . '.json');
+                }
+                return Helper::getResponse('Storage error: an internal error occurred while adding a new statements file to the proper path', 500);
+            };
         }
 
         return response()->json($statementIds);
@@ -148,7 +151,8 @@ class StatementController extends Controller
      *         required=false,
      *         @OA\Schema(
      *             type="integer",
-     *             format="int32"
+     *             format="int32",
+     *             minimum=1
      *         )
      *     ),
      *     @OA\Parameter(
@@ -167,7 +171,8 @@ class StatementController extends Controller
      *         required=false,
      *         @OA\Schema(
      *             type="integer",
-     *             format="int32"
+     *             format="int32",
+     *             minimum=1
      *         )
      *     ),
      *     @OA\Response(
@@ -179,19 +184,23 @@ class StatementController extends Controller
      *         ref="#/components/responses/Success204"
      *     ),
      *     @OA\Response(
+     *         response=401,
+     *         ref="#/components/responses/Error401"
+     *     ),
+     *     @OA\Response(
      *         response=403,
      *         ref="#/components/responses/Error403"
      *     )
      * )
-    */
+     */
     /**
      * Get the statement with the unique id.
      * @param Request $request
      * @return array
-    */
+     */
     public function getList(Request $request)
-    {   
-        
+    {
+
         $limit = $request->input('limit') ? (int) $request->input('limit') : self::PAGINATION;
         $verb = $request->input('verb') ? $request->input('verb') : null;
         $page = $request->input('page');
@@ -200,10 +209,10 @@ class StatementController extends Controller
         $folder = $lrs->folder;
         if (isset($page) && !is_numeric($page)) {
             return Helper::getResponse("The page parameter must be integer.", 400);
-        } else { 
-            $page = (int) $page; 
+        } else {
+            $page = (int) $page;
         }
-        
+
         $content = $this->statementRepository->all($folder, $limit, $verb, $page);
 
         if ($content) {
@@ -239,11 +248,15 @@ class StatementController extends Controller
      *         ref="#/components/responses/Success204"
      *     ),
      *     @OA\Response(
+     *         response=401,
+     *         ref="#/components/responses/Error401"
+     *     ),
+     *     @OA\Response(
      *         response=403,
      *         ref="#/components/responses/Error403"
      *     )
      * )
-    */
+     */
     /**
      * Get the statement with the unique id.
      * @param Request $request
@@ -251,7 +264,7 @@ class StatementController extends Controller
      * @return Statement
      */
     public function get(Request $request, string $id)
-    {   
+    {
         $lrs = $this->locker::getLrsFromAuth($request);
         $folder = $lrs->folder;
 
@@ -263,5 +276,4 @@ class StatementController extends Controller
 
         return Helper::getResponse("No statement found", 204, true);
     }
-
 }
