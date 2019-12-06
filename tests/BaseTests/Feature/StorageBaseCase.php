@@ -13,30 +13,29 @@ use Laravel\Lumen\Testing\DatabaseMigrations;
 abstract class StorageBaseCase extends TestCase
 {
     use DatabaseMigrations;
-    
+
     public abstract function authentication();
     /**
      * A setup method launched at the beginning of test
      *
      * @return void
-    */
-    public function setup():void
+     */
+    public function setup(): void
     {
         parent::setUp();
         $this->artisan('migrate');
         $this->artisan('db:seed');
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '", "' . Scope::STATEMENTS_WRITE . '"]']);
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '", "' . Scope::STATEMENTS_WRITE . '"]']);
 
         Storage::fake('local');
-                
     }
 
     /**
      * A setup method launched at the end of test
      *
      * @return void
-    */
+     */
     public function tearDown()
     {
         HelperTest::deleteTestingFolders();
@@ -57,12 +56,12 @@ abstract class StorageBaseCase extends TestCase
 
     /**
      * @test
-    */
-    public function storageStatementSuccessTest() 
+     */
+    public function storageStatementSuccessTest()
     {
         $helper = $this->help();
         $repo = new StatementRepository();
-        
+
         $header = $this->authentication();
         $res = $this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], $header);
         $id = json_decode($res->getContent())[0];
@@ -70,13 +69,12 @@ abstract class StorageBaseCase extends TestCase
 
         Storage::disk('local')->assertExists(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'lrs_test' . DIRECTORY_SEPARATOR . $id . '.json');
         $this->assertEquals($id, $statement->statement->id);
-
     }
 
     /**
      * @test
      */
-    public function storageStatementsSuccessTest() 
+    public function storageStatementsSuccessTest()
     {
         $helper = $this->help();
         $uid1 = (string) Uuid::uuid1();
@@ -100,7 +98,7 @@ abstract class StorageBaseCase extends TestCase
     /**
      * @test
      */
-    public function storageFailureTest() 
+    public function storageFailureTest()
     {
         $uid = (string) Uuid::uuid1();
 
@@ -114,24 +112,24 @@ abstract class StorageBaseCase extends TestCase
     /**
      * @test
      */
-    public function readStatementSuccessTest() 
+    public function readStatementSuccessTest()
     {
         $helper = $this->help();
         $uid = (string) Uuid::uuid1();
-        
+
         $header = $this->authentication();
         $this->call('POST', HelperTest::URL, $helper->getStatementWithUuid($uid), [], [], $header);
-        
+
         $storageService = new StatementStorageService();
         $content  = $storageService->read('lrs_test');
-        
+
         $statement = [
             'lrs_id' => '1234567890',
             'client_id' => env('CLIENT_ID'),
             'statement' => $helper->getStatementWithUuid($uid)
         ];
-        $expected = '['.json_encode($statement, JSON_UNESCAPED_SLASHES).']';
-        
+        $expected = '[' . json_encode($statement, JSON_UNESCAPED_SLASHES) . ']';
+
         $filteredContent = json_decode($content);
         unset($filteredContent[0]->statement->stored);
 
@@ -142,7 +140,7 @@ abstract class StorageBaseCase extends TestCase
     /**
      * @test
      */
-    public function readMultipleStatementSuccessTest() 
+    public function readMultipleStatementSuccessTest()
     {
         $helper = $this->help();
         $uid  = (string) Uuid::uuid1();
@@ -151,7 +149,7 @@ abstract class StorageBaseCase extends TestCase
         $header = $this->authentication();
         $this->call('POST', HelperTest::URL, $helper->getStatementWithUuid($uid),  [], [], $header);
         $this->call('POST', HelperTest::URL, $helper->getStatementWithUuid($uid2), [], [], $header);
-        
+
         $storageService = new StatementStorageService();
         $content  = $storageService->read('lrs_test');
         $statement = [
@@ -164,7 +162,7 @@ abstract class StorageBaseCase extends TestCase
             'client_id' => env('CLIENT_ID'),
             'statement' => $helper->getStatementWithUuid($uid2)
         ];
-        $expected = [json_encode($statement, JSON_UNESCAPED_SLASHES),json_encode($statement2, JSON_UNESCAPED_SLASHES)];
+        $expected = [json_encode($statement, JSON_UNESCAPED_SLASHES), json_encode($statement2, JSON_UNESCAPED_SLASHES)];
 
         $filteredContent = json_decode($content);
         foreach ($filteredContent as $statement) {
@@ -188,12 +186,12 @@ abstract class StorageBaseCase extends TestCase
         $this->call('POST', HelperTest::URL, $helper->getStatementWithUuid($uid), [], [], $header);
 
         $storageService = new StatementStorageService();
-        $storedFile = Storage::files(HelperTest::STORAGE_PATH.DIRECTORY_SEPARATOR.'lrs_test'); 
+        $storedFile = Storage::files(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'lrs_test');
 
         $content    = Storage::disk('local')->get($storedFile[0]);
 
         $storageService->storeBackup($content, 'lrs_test');
-        $fileName = Storage::files(HelperTest::STORAGE_BACKUP_PATH.DIRECTORY_SEPARATOR.'lrs_test');
+        $fileName = Storage::files(HelperTest::STORAGE_BACKUP_PATH . DIRECTORY_SEPARATOR . 'lrs_test');
         $actualContent = Storage::disk('local')->get($fileName[0]);
 
         $this->assertEquals($content, $actualContent);
@@ -211,16 +209,16 @@ abstract class StorageBaseCase extends TestCase
         $this->call('POST', HelperTest::URL, $helper->getStatementWithUuid($uid), [], [], $header);
 
         if (Storage::exists(HelperTest::STORAGE_BACKUP_PATH)) {
-            Storage::deleteDirectory(HelperTest::STORAGE_BACKUP_PATH.DIRECTORY_SEPARATOR.'lrs_test');
+            Storage::deleteDirectory(HelperTest::STORAGE_BACKUP_PATH . DIRECTORY_SEPARATOR . 'lrs_test');
         }
 
         $storageService = new StatementStorageService();
-        $storedFile = Storage::files(HelperTest::STORAGE_PATH.DIRECTORY_SEPARATOR.'lrs_test'); 
+        $storedFile = Storage::files(HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'lrs_test');
 
         $content = Storage::disk('local')->get($storedFile[0]);
 
         $storageService->storeBackup($content, 'lrs_test');
-        $fileName = Storage::files(HelperTest::STORAGE_BACKUP_PATH.DIRECTORY_SEPARATOR.'lrs_test');
+        $fileName = Storage::files(HelperTest::STORAGE_BACKUP_PATH . DIRECTORY_SEPARATOR . 'lrs_test');
         $actualContent = Storage::disk('local')->get($fileName[0]);
 
         $this->assertEquals($content, $actualContent);
@@ -241,8 +239,7 @@ abstract class StorageBaseCase extends TestCase
         $content = [];
 
         $val = $storageService->store($content, 'lrs_test');
-       
+
         $this->assertTrue($val);
     }
-    
 }

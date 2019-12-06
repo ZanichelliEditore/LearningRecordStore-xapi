@@ -24,15 +24,15 @@ abstract class StatementBaseCase extends TestCase
      * A setup method launched at the beginning of test
      *
      * @return void
-    */
-    public function setup():void
+     */
+    public function setup(): void
     {
         parent::setUp();
         $this->artisan('migrate');
         $this->artisan('db:seed');
 
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::STATEMENTS_WRITE . '"]']);
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_WRITE . '"]']);
 
         Storage::fake('local');
     }
@@ -41,7 +41,7 @@ abstract class StatementBaseCase extends TestCase
      * A setup method launched at the end of test
      *
      * @return void
-    */
+     */
     public function tearDown()
     {
         HelperTest::deleteTestingFolders();
@@ -69,7 +69,7 @@ abstract class StatementBaseCase extends TestCase
      *
      * @param array $body
      * @return Response response
-    */
+     */
     private function sendStatements($body)
     {
         return $this->call('POST', HelperTest::URL, $body, [], [],  $this->authentication());
@@ -78,8 +78,9 @@ abstract class StatementBaseCase extends TestCase
     /**
      * Create authority object
      * @return Authority
-    */
-    private function getObjAuth() {
+     */
+    private function getObjAuth()
+    {
         $object_auth = new Authority('Client', 'example@gmail.com');
         return $object_auth;
     }
@@ -104,39 +105,34 @@ abstract class StatementBaseCase extends TestCase
 
     /**
      * @param boolean $savingSuccess
-     * @param boolean $reading
      * @return Mockery\MockInterface $mock
      */
-    public function getMock(bool $savingSuccess = true, bool $reading = false)
-    {        
-        $mock = $reading ? Mockery::mock(StatementStorageService::class) :
-        Mockery::mock(StatementStorageService::class)
+    public function getMock(bool $savingSuccess = true)
+    {
+        $mock = Mockery::mock(StatementStorageService::class)
             ->makePartial()
             ->shouldReceive([
                 'store' => $savingSuccess
-            ])        
+            ])
             ->withAnyArgs()
-            ->once()
             ->getMock();
         $this->app->instance('App\Services\StatementStorageService', $mock);
         return $mock;
     }
 
     /**
-     * @param boolean $savingSuccess
      * @param array|null $allSuccess
      * @param string|null $findSuccess
      * @return Mockery\MockInterface $mock
      */
-    public function getMockRepo(bool $reading = false, $allSuccess = null, $findSuccess = null)
+    public function getMockRepo($allSuccess = null, $findSuccess = null)
     {
-        $mock = !$reading ? Mockery::mock(StatementRepository::class) : 
-        Mockery::mock(StatementRepository::class)
+        $mock = Mockery::mock(StatementRepository::class)
             ->makePartial()
             ->shouldReceive([
                 'all' => $allSuccess,
                 'find' => $findSuccess
-            ])        
+            ])
             ->withAnyArgs()
             ->getMock();
         $this->app->instance('App\Http\Repositories\xapiRepositories\StatementRepository', $mock);
@@ -144,27 +140,26 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-     * @param boolean $savingSuccess
-     * @param boolean $reading
+     * @param array $classes
      * @return Mockery\MockInterface $mock
      */
     public function getMockLocker(array $classes = [])
-    {        
+    {
         $object_lrs = new stdClass;
         $object_lrs->folder = 'test';
         $object_lrs->_id = 'object_id';
-        
+
         $mocked = [
             'getLrsFromAuth' => $object_lrs,
             'getAuthorityFromAuth' => $this->getObjAuth(),
             'getClientId' => 'clientId'
         ];
-        $classes =  !empty($classes) ? $classes : $mocked;   
+        $classes =  !empty($classes) ? $classes : $mocked;
 
         $classesMocked = array_intersect_key($mocked, $classes);
         $mock = Mockery::mock(LockerLrs::class)
             ->makePartial()
-            ->shouldReceive($classesMocked)        
+            ->shouldReceive($classesMocked)
             ->withAnyArgs()
             ->once()
             ->getMock();
@@ -193,7 +188,7 @@ abstract class StatementBaseCase extends TestCase
     {
 
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["fail_test"]']);
+            ->update(['scopes'  => '["fail_test"]']);
 
         $helper   = $this->help();
         $response = $this->call('GET', HelperTest::URL, $helper->getStatement(), [], [], $this->authentication());
@@ -207,14 +202,14 @@ abstract class StatementBaseCase extends TestCase
      */
     public function statementScopesSuccessTest()
     {
- 
+
         $helper   = $this->help();
 
         $response = $this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], $this->authentication());
         $this->assertEquals(200, $response->status());
 
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
         $response = $this->call('GET', HelperTest::URL, [], [], [], $this->authentication());
         $this->assertEquals(200, $response->status());
@@ -228,7 +223,7 @@ abstract class StatementBaseCase extends TestCase
     {
 
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::ALL . '"]']);
+            ->update(['scopes'  => '["' . Scope::ALL . '"]']);
 
         $helper   = $this->help();
 
@@ -237,17 +232,16 @@ abstract class StatementBaseCase extends TestCase
 
         $response = $this->call('GET', HelperTest::URL, [], [], [], $this->authentication());
         $this->assertEquals(200, $response->status());
-
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
     public function statementPostSuccessTest()
     {
         $statementRequest = $this->getRequest();
-        $statementController = new StatementController($this->getMock(), $this->getMockRepo(), $this->getMockLocker());
+        $statementController = new StatementController($this->getMock(), new StatementRepository(), $this->getMockLocker());
         $statementRequest->replace($this->help()->getStatement());
 
         $response = $statementController->store($statementRequest);
@@ -255,7 +249,7 @@ abstract class StatementBaseCase extends TestCase
         $this->assertEquals(200, $response->status());
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
@@ -283,23 +277,23 @@ abstract class StatementBaseCase extends TestCase
     public function statementsPostSuccessTest()
     {
 
-        $statementRequest = $this->getRequest();        
-        $statementController = new StatementController($this->getMock(), $this->getMockRepo(), $this->getMockLocker());
+        $statementRequest = $this->getRequest();
+        $statementController = new StatementController($this->getMock(), new StatementRepository(), $this->getMockLocker());
         $helper = $this->help();
         $statementRequest->replace([$helper->getStatement(), $helper->getStatement()]);
-        
+
         $response = $statementController->store($statementRequest);
         $this->assertEquals(200, $response->status());
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
     public function statementSuccessIdFileTest()
     {
-        $statementRequest = $this->getRequest();        
-        $statementController = new StatementController($this->getMock(), $this->getMockRepo(),$this->getMockLocker());
+        $statementRequest = $this->getRequest();
+        $statementController = new StatementController($this->getMock(), new StatementRepository(), $this->getMockLocker());
         $uid = (string) Uuid::uuid1();
         $statementRequest->replace($this->help()->getStatementWithUuid($uid));
 
@@ -308,55 +302,74 @@ abstract class StatementBaseCase extends TestCase
         $this->assertEquals($uid, $uidFile);
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
     public function statementReadAllSuccessTest()
-    {      
+    {
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
-        
+
         $statementRequest = $this->getRequest();
         $statement = array(0 => $this->help()->getStatement());
-        $statementController = new StatementController($this->getMock(true, true), $this->getMockRepo(true, $statement), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
-        
+        $statementController = new StatementController(new StatementStorageService(), $this->getMockRepo($statement), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
+
         $response = $statementController->getList($statementRequest);
         $this->assertEquals(200, $response->status());
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
     public function statementReadSuccessTest()
     {
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
         $id = (string) Uuid::uuid1();
-        $statementRequest = $this->getRequest();        
-        $statementController = new StatementController($this->getMock(true, true),  $this->getMockRepo(true, null, $this->help()->getStatementWithUuid($id)), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));        
+        $statementRequest = $this->getRequest();
+        $statementController = new StatementController(new StatementStorageService(),  $this->getMockRepo(null, $this->help()->getStatementWithUuid($id)), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
 
         $response = $statementController->get($statementRequest, $id);
         $this->assertEquals(200, $response->status());
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
     public function statementReadAllEmptyTest()
-    {      
+    {
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
-        $statementRequest = $this->getRequest();     
-        $statementController = new StatementController($this->getMock(true, true), $this->getMockRepo(true, null), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
+        $statementRequest = $this->getRequest();
+        $statementController = new StatementController(new StatementStorageService(), $this->getMockRepo(null), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
 
         $response = $statementController->getList($statementRequest);
         $this->assertEquals(204, $response->status());
+    }
+
+    /**
+     * @test
+     * @return void
+     */
+    public function statementWrongReadAllTest()
+    {
+        Client::where('api_basic_key', env('CLIENT_ID'))
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
+
+
+        $statementRequest = $this->getRequest();
+        $statement = array(0 => $this->help()->getStatement());
+        $statementController = new StatementController(new StatementStorageService(), $this->getMockRepo($statement), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
+
+        $statementRequest['page'] = 'test';
+        $response = $statementController->getList($statementRequest);
+        $this->assertEquals(400, $response->status());
     }
 
     /**
@@ -364,12 +377,12 @@ abstract class StatementBaseCase extends TestCase
      * @return void
      */
     public function statementReadEmptyTest()
-    {      
+    {
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '"]']);
 
         $statementRequest = $this->getRequest();
-        $statementController = new StatementController($this->getMock(true, true),  $this->getMockRepo(true, null, null), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
+        $statementController = new StatementController(new StatementStorageService(),  $this->getMockRepo(null, null), $this->getMockLocker(['getLrsFromAuth' => $this->getObjAuth()]));
         $id = (string) Uuid::uuid1();
 
         $response = $statementController->get($statementRequest, $id);
@@ -377,9 +390,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function sendingStatementsWithFailureTest()
     {
         $helper = $this->help();
@@ -399,7 +412,7 @@ abstract class StatementBaseCase extends TestCase
      * @return void
      */
     public function statementObjectIdErrorValidationTest()
-    {   
+    {
         $statement = $this->help()->getStatement();
         unset($statement['object']['id']);
         $response = $this->sendStatements($statement);
@@ -410,9 +423,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementActorObjectTypeErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -429,9 +442,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementObjObjectTypeErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -447,14 +460,14 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementContextErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
         $statement['object']['objectType'] = 'Agent';
-        $statement['context']['revision'] = 'string';        
+        $statement['context']['revision'] = 'string';
         $response = $this->sendStatements($statement);
         $this->assertEquals(400, $response->status());
 
@@ -464,16 +477,16 @@ abstract class StatementBaseCase extends TestCase
         $this->validateResponse($message);
     }
 
-        /**
-    * @test
-    * @return void
-    */
+    /**
+     * @test
+     * @return void
+     */
     public function statementContextRevisionErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
         $statement['object']['objectType'] = 'Agent';
         unset($statement['context']['platform']);
-        $statement['context']['revision'] = 'string';        
+        $statement['context']['revision'] = 'string';
         $response = $this->sendStatements($statement);
         $this->assertEquals(400, $response->status());
 
@@ -484,9 +497,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementVerbIdErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -499,9 +512,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementAccountHPErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -514,9 +527,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementAccountNameErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -529,9 +542,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementExtensionsErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -549,9 +562,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementLangMapErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -595,9 +608,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementStringErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -617,7 +630,7 @@ abstract class StatementBaseCase extends TestCase
         $this->assertEquals(400, $response->status());
 
         $message = [
-            "The actor.account.home page must be a string.", 
+            "The actor.account.home page must be a string.",
             "The actor.account.name must be a string.",
             "The actor.name must be a string.",
             "The authority.mbox must be a string.The authority.mbox format is invalid.",
@@ -632,9 +645,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementBooleanErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -651,9 +664,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementUuidErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -670,9 +683,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementIRIErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -689,9 +702,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementArrayErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -708,9 +721,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementMboxErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -725,9 +738,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementScoreErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -746,9 +759,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementDurationErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -761,9 +774,9 @@ abstract class StatementBaseCase extends TestCase
     }
 
     /**
-    * @test
-    * @return void
-    */
+     * @test
+     * @return void
+     */
     public function statementStatementRefErrorValidationTest()
     {
         $statement = $this->help()->getStatement();
@@ -806,7 +819,7 @@ abstract class StatementBaseCase extends TestCase
         $this->validateResponse($message);
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
@@ -822,7 +835,7 @@ abstract class StatementBaseCase extends TestCase
         $this->validateResponse($message);
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
@@ -843,7 +856,7 @@ abstract class StatementBaseCase extends TestCase
      * @return void
      */
     public function statementsPostSubstatementSuccessTest()
-    {   
+    {
         $response = $this->sendStatements($this->help()->getStatementWithSubstatement());
         $this->assertEquals(200, $response->status());
     }
@@ -854,8 +867,8 @@ abstract class StatementBaseCase extends TestCase
      * @return void
      */
     public function statementsFailedStoringTest()
-    {   
-        $statementController = new StatementController($this->getMock(false), $this->getMockRepo(), $this->getMockLocker());
+    {
+        $statementController = new StatementController($this->getMock(false), new StatementRepository(), $this->getMockLocker());
         $response = $this->sendStatements($this->help()->getStatementWithSubstatement());
         $this->assertEquals(500, $response->status());
     }
@@ -867,24 +880,24 @@ abstract class StatementBaseCase extends TestCase
      */
     public function sendingSubstatementWithObjectIdValidationTest()
     {
-        
+
         $statement = $this->help()->getStatementWithSubstatement();
         $statement['object']['id'] = "https://w3id.org/xapi/keys/object-id";
-        
+
         $response = $this->sendStatements($statement);
-        
+
         $this->assertEquals(400, $response->status());
-        $this->validateResponse([ 'Invalid field inside object. SubStatement must not have id, authority, version, stored']);
+        $this->validateResponse(['Invalid field inside object. SubStatement must not have id, authority, version, stored']);
     }
 
-     /**
+    /**
      * @test
      *
      * @return void
      */
     public function sendingSubstatementWithObjectAuthorityValidationTest()
-    {  
-        
+    {
+
         $statement = $this->help()->getStatementWithSubstatement();
         $statement['object']['authority'] = [
             "objectType" => "Agent",
@@ -893,7 +906,7 @@ abstract class StatementBaseCase extends TestCase
         ];
 
         $response = $this->sendStatements($statement);
-        
+
         $this->assertEquals(400, $response->status());
         $this->validateResponse(['Incorrect statement structure: unprocessable fields found.']);
     }
@@ -907,9 +920,9 @@ abstract class StatementBaseCase extends TestCase
     {
         $statement = $this->help()->getStatementWithSubstatement();
         $statement['object']['object']['objectType'] = "SubStatement";
-        
+
         $response = $this->sendStatements($statement);
-        
+
         $this->assertEquals(400, $response->status());
         $this->validateResponse(['The selected object.object.object type is invalid.']);
     }
@@ -930,11 +943,10 @@ abstract class StatementBaseCase extends TestCase
             "registration" => "0ab5f76e-3389-11e9-873f-6aa43c3ec3b2"
         ];
         $statement['object']['context']['extensions'] =  ['test' => "https://example.com/xapi/activities"];
-        
+
         $response = $this->sendStatements($statement);
-        
+
         $this->assertEquals(400, $response->status());
         $this->validateResponse(['The keys of an extensions map MUST be IRIs.']);
     }
-
 }
