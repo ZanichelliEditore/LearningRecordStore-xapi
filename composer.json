@@ -14,12 +14,12 @@
     "doctrine/dbal": "^2.9",
     "dusterio/lumen-passport": "^0.2.9",
     "flipbox/lumen-generator": "^5.6",
-    "laravel/lumen-framework": "5.7.*",
+    "laravel/lumen-framework": "5.8.*",
     "league/flysystem-aws-s3-v3": "~1.0",
     "ramsey/uuid": "^2.9",
     "seld/jsonlint": "^1.7",
     "symfony/http-foundation": "4.2.12",
-    "vlucas/phpdotenv": "~2.2"
+    "vlucas/phpdotenv": "~3.0"
   },
   "require-dev": {
     "fzaninotto/faker": "~1.4",

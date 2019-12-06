@@ -36,7 +36,7 @@ abstract class StorageBaseCase extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         HelperTest::deleteTestingFolders();
         $this->artisan('migrate:reset');

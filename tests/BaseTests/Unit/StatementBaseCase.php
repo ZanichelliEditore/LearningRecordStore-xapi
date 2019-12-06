@@ -42,7 +42,7 @@ abstract class StatementBaseCase extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         HelperTest::deleteTestingFolders();
         $this->artisan('migrate:reset');
@@ -676,8 +676,8 @@ abstract class StatementBaseCase extends TestCase
         $this->assertEquals(400, $response->status());
 
         $message = [
-            "validation.uuid",
-            "validation.uuid"
+            "The context.registration must be a valid UUID.",
+            "The id must be a valid UUID."
         ];
         $this->validateResponse($message);
     }
@@ -785,7 +785,7 @@ abstract class StatementBaseCase extends TestCase
         $response = $this->sendStatements($statement);
         $this->assertEquals(400, $response->status());
 
-        $message = ["validation.uuid"];
+        $message = ["The object.id must be a valid UUID."];
         $this->validateResponse($message);
     }
 
