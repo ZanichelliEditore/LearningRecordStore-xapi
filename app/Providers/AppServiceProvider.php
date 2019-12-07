@@ -32,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot()
     {
-        LumenPassport::routes($this->app);
+        LumenPassport::routes($this->app->router);
         Client::creating(function (Client $client) {
             $client->incrementing = false;
             $client->id = sha1(uniqid(mt_rand(), true));

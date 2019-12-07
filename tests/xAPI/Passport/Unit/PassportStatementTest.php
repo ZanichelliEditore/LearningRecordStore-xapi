@@ -12,7 +12,7 @@ class PassportStatementTest extends StatementBase
     /**
      * Request oauth token
      * @return  array
-    */
+     */
     public function authentication(array $scopes = [])
     {
         $helper = $this->help();
@@ -30,18 +30,18 @@ class PassportStatementTest extends StatementBase
         try {
             $access_token = $body->access_token;
         } catch (Exception $e) {
-            Log::error('Test error: '. (string)$e);
+            Log::error('Test error: ' . (string) $e);
             $access_token = '';
         }
         return $helper->createHeader($access_token);
     }
-    
-     /**
+
+    /**
      * Get basic request with auth params
      *
      * @return Illuminate\Http\Request
      */
-    public function getRequest() 
+    public function getRequest()
     {
         return new Request();
     }
@@ -54,7 +54,6 @@ class PassportStatementTest extends StatementBase
     {
         $this->authentication([Scope::ALL]);
         parent::statementScopesAllTest();
-
     }
 
     /**
@@ -63,7 +62,7 @@ class PassportStatementTest extends StatementBase
      */
     public function baseStatementPostSuccessTest()
     {
-        $statementRequest = $this->getRequest();        
+        $statementRequest = $this->getRequest();
         $statementController = new StatementController($this->getMock(), $this->getMockRepo(), $this->getMockLocker());
 
         $statement = $this->help()->getStatement();
@@ -77,7 +76,7 @@ class PassportStatementTest extends StatementBase
         unset($statement['object']['definition']);
         $statementRequest->replace($statement);
 
-        $statementRequest->headers->set('Authorization', (string)$this->authentication()['HTTP_Authorization']);
+        $statementRequest->headers->set('Authorization', (string) $this->authentication()['HTTP_Authorization']);
         $response = $statementController->store($statementRequest);
         $this->assertEquals(200, $response->status());
     }
@@ -88,12 +87,12 @@ class PassportStatementTest extends StatementBase
      * @return void
      */
     public function statementsPostSubstatementSuccessTest()
-    {   
-        $statementRequest = $this->getRequest();      
+    {
+        $statementRequest = $this->getRequest();
         $statementController = new StatementController($this->getMock(), $this->getMockRepo(), $this->getMockLocker());
 
         $statementRequest->replace($this->help()->getStatementWithSubstatement());
-        $statementRequest->headers->set('Authorization', (string)$this->authentication()['HTTP_Authorization']);
+        $statementRequest->headers->set('Authorization', (string) $this->authentication()['HTTP_Authorization']);
         $response = $statementController->store($statementRequest);
         $this->assertEquals(200, $response->status());
     }
@@ -104,14 +103,13 @@ class PassportStatementTest extends StatementBase
      * @return void
      */
     public function statementsFailedStoringTest()
-    {   
-        $statementRequest = $this->getRequest();        
+    {
+        $statementRequest = $this->getRequest();
         $statementController = new StatementController($this->getMock(false), $this->getMockRepo(), $this->getMockLocker());
         $statementRequest->replace($this->help()->getStatementWithSubstatement());
-        $statementRequest->headers->set('Authorization', (string)$this->authentication()['HTTP_Authorization']);
+        $statementRequest->headers->set('Authorization', (string) $this->authentication()['HTTP_Authorization']);
 
         $response = $statementController->store($statementRequest);
         $this->assertEquals(500, $response->status());
     }
-
 }

@@ -5,8 +5,6 @@ ARG UID
 
 RUN apt-get update &&  apt-get install -y libmcrypt-dev mariadb-client openssl zip unzip git libpng-dev libjpeg62-turbo-dev libgd-dev  apt-utils \
     && docker-php-ext-install pdo_mysql \
-    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
-    && docker-php-ext-install gd \
     && pecl install xdebug-2.7.0beta1 \
     && docker-php-ext-enable xdebug 
 

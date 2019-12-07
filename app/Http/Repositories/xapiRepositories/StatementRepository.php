@@ -37,7 +37,7 @@ class StatementRepository implements StatementRepositoryInterface
      */
     public function store(string $statements, string $folder)
     {
-        $keyname = date("YmdHis_", time()) . substr(md5(mt_rand()), 0, 5); 
+        $keyname = date("YmdHis_", time()) . substr(md5(mt_rand()), 0, 5);
 
         $object = $this->client->putObject([
             'Bucket' => env('AWS_BUCKET'),
@@ -61,12 +61,12 @@ class StatementRepository implements StatementRepositoryInterface
         $this->statementService = new StatementStorageService();
 
         try {
-            $content = $this->statementService->read($folder, $delete = false);
-            $contentBackup = $this->statementService->read($folder, $delete = false, $backup = true);     
-        } catch (StorageException $e) { 
+            $content = $this->statementService->read($folder, false);
+            $contentBackup = $this->statementService->read($folder, false, true);
+        } catch (StorageException $e) {
             return null;
         }
-           
+
         if (!$content && !$contentBackup) {
             return null;
         } elseif (!$content) {
@@ -81,10 +81,10 @@ class StatementRepository implements StatementRepositoryInterface
             foreach ($merge as $key => $val) {
                 if (strpos($val->statement->verb->id, $verb) === false) {
                     unset($merge[$key]);
-                } 
+                }
             }
         }
-        
+
         $realPage = $page - 1;
         $pagedArray = array_chunk($merge, $limit, true);
         if (empty($pagedArray) || !isset($pagedArray[$realPage])) {
@@ -98,7 +98,7 @@ class StatementRepository implements StatementRepositoryInterface
         $next_page = ($page === $last_key) ? null : ($page + 1);
         $total = count($merge);
         $from = array_keys($pagedArray[$realPage])[0] + 1;
-        $to = ($page === $last_key) ? $total : count($pagedArray[$realPage]) * $page; 
+        $to = ($page === $last_key) ? $total : count($pagedArray[$realPage]) * $page;
         $links = new Link($first_key, $last_key, $prev_page, $next_page);
         $meta = new Meta($page, $from, $last_key, $limit, $to, $total);
 
@@ -107,8 +107,8 @@ class StatementRepository implements StatementRepositoryInterface
             "links" => $links->getFields(),
             "meta" => $meta->getFields()
         ];
-        
-        return $res;   
+
+        return $res;
     }
 
     /**
@@ -118,17 +118,18 @@ class StatementRepository implements StatementRepositoryInterface
      * @param string $id
      * @return Statement|null 
      */
-    public function find(string $folder, string $id) {
+    public function find(string $folder, string $id)
+    {
 
         $limit = Controller::PAGINATION;
-        $res = $this->all($folder, $limit);             
+        $res = $this->all($folder, $limit);
         if (!$res) {
             return null;
         }
-        
+
         $content = $res['statements'];
-        
-        foreach ($content as $ele) {   
+
+        foreach ($content as $ele) {
             if ($ele->statement->id == $id) {
                 return $ele;
             }

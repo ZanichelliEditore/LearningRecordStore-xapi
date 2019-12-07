@@ -5,6 +5,7 @@ use Rhumsaa\Uuid\Uuid;
 use App\Constants\Scope;
 use App\Locker\HelperTest;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Filesystem\Filesystem;
 use Laravel\Lumen\Testing\DatabaseMigrations;
 use App\Http\Repositories\xapiRepositories\StatementRepository;
 
@@ -18,14 +19,14 @@ abstract class RepositoryBaseCase extends TestCase
      * A setup method launched at the beginning of test
      *
      * @return void
-    */
-    public function setup():void
+     */
+    public function setup(): void
     {
         parent::setUp();
         $this->artisan('migrate');
         $this->artisan('db:seed');
         Client::where('api_basic_key', env('CLIENT_ID'))
-                ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '", "' . Scope::STATEMENTS_WRITE . '"]']);
+            ->update(['scopes'  => '["' . Scope::STATEMENTS_READ . '", "' . Scope::STATEMENTS_WRITE . '"]']);
 
         Storage::fake('local');
     }
@@ -34,8 +35,8 @@ abstract class RepositoryBaseCase extends TestCase
      * A setup method launched at the end of test
      *
      * @return void
-    */
-    public function tearDown()
+     */
+    public function tearDown(): void
     {
         HelperTest::deleteTestingFolders();
         $this->artisan('migrate:reset');
@@ -68,9 +69,12 @@ abstract class RepositoryBaseCase extends TestCase
         Storage::makeDirectory(HelperTest::STORAGE_BACKUP_PATH);
         Storage::makeDirectory($filePathBackup);
 
-        $this->call('POST', HelperTest::URL, $helper->getStatement(), [], [], $this->authentication());
+        $res = $this->json('POST', HelperTest::URL, $helper->getStatement(), $this->authentication());
 
+        $res->assertResponseStatus(200);
         $statements = $repo->all('lrs_test', self::LIMIT);
+
+        $this->assertCount(1, $statements['statements']);
         $statement = $statements['statements'][0]->statement;
         unset($statement->id);
         unset($statement->stored);
@@ -87,11 +91,11 @@ abstract class RepositoryBaseCase extends TestCase
         $repo = new StatementRepository();
 
         $statements = $repo->all('lrs_test', self::LIMIT);
-        
+
         $this->assertNull($statements);
     }
 
-     /**
+    /**
      * @test
      * @return void
      */
@@ -101,27 +105,21 @@ abstract class RepositoryBaseCase extends TestCase
         $repo = new StatementRepository();
         $filePathBackup = HelperTest::STORAGE_BACKUP_PATH . DIRECTORY_SEPARATOR . 'lrs_test';
         $filePath = HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'lrs_test';
-      
+
         Storage::makeDirectory(HelperTest::STORAGE_PATH);
         Storage::makeDirectory($filePath);
 
         Storage::makeDirectory(HelperTest::STORAGE_BACKUP_PATH);
         Storage::makeDirectory($filePathBackup);
 
-        UploadedFile::fake()->create($filePathBackup . 'test.json', 1);
-
-        Storage::put($filePathBackup . '/test.json', $helper->createStatementFileContent("ciccio"));
+        Storage::put($filePathBackup . '/test.json', json_encode([$helper->getStatement(), $helper->getStatement()]));
 
         $statements = $repo->all('lrs_test', self::LIMIT);
 
-        $statement = $statements['statements'][0]->statement;
-        unset($statement->id);
-        unset($statement->stored);
-
-        $this->assertEquals(json_encode($helper->getStatement("ciccio")), json_encode($statement));
+        $this->assertEquals(2, count($statements['statements']));
     }
 
-        /**
+    /**
      * @test
      * @return void
      */
@@ -131,32 +129,22 @@ abstract class RepositoryBaseCase extends TestCase
         $repo = new StatementRepository();
         $filePathBackup = HelperTest::STORAGE_BACKUP_PATH . DIRECTORY_SEPARATOR . 'lrs_test';
         $filePath = HelperTest::STORAGE_PATH . DIRECTORY_SEPARATOR . 'lrs_test';
-      
+
         Storage::makeDirectory(HelperTest::STORAGE_PATH);
         Storage::makeDirectory($filePath);
 
         Storage::makeDirectory(HelperTest::STORAGE_BACKUP_PATH);
         Storage::makeDirectory($filePathBackup);
 
-        UploadedFile::fake()->create($filePathBackup . 'test.json', 1);
         UploadedFile::fake()->create($filePath . 'test.json', 1);
+        UploadedFile::fake()->create($filePathBackup . 'test2.json', 1);
 
-        $pathStatementAttrName = 'eve';
-        $pathBackupStatementAttrName = 'alice';
-
-        Storage::put($filePath . '/test.json', $helper->createStatementFileContent($pathStatementAttrName));
-        Storage::put($filePathBackup . '/test.json', $helper->createStatementFileContent($pathBackupStatementAttrName));
+        Storage::put($filePath . '/test.json', json_encode($helper->getStatement()));
+        Storage::put($filePathBackup . '/test2.json', json_encode([$helper->getStatement(), $helper->getStatement()]));
 
         $statements = $repo->all('lrs_test', self::LIMIT);
 
-        $this->assertCount(2,$statements['statements']);
-
-        $statement = $statements['statements'][0]->statement;
-        $this->assertEquals(json_encode($helper->getStatement($pathStatementAttrName)), json_encode($statement));
-
-        $statement = $statements['statements'][1]->statement;
-        $this->assertEquals(json_encode($helper->getStatement($pathBackupStatementAttrName)), json_encode($statement));
-
+        $this->assertCount(3, $statements['statements']);
     }
 
     /**
@@ -175,14 +163,14 @@ abstract class RepositoryBaseCase extends TestCase
 
         Storage::makeDirectory(HelperTest::STORAGE_BACKUP_PATH);
         Storage::makeDirectory($filePathBackup);
-        
+
         $this->call('POST', HelperTest::URL, [$statement1, $statement2], [], [], $this->authentication())->getContent();
 
         $statements = $repo->all('lrs_test', self::LIMIT, $verb);
-
+        $this->assertCount(1, $statements['statements']);
         $statement = $statements['statements'][0]->statement;
         unset($statement->id);
-        unset($statement->stored);     
+        unset($statement->stored);
         $this->assertTrue(!isset($statements[0]));
         $this->assertEquals(json_encode($statement2), json_encode($statement));
 
@@ -199,23 +187,25 @@ abstract class RepositoryBaseCase extends TestCase
         $helper = $this->help();
         $repo = new StatementRepository();
         $filePathBackup = HelperTest::STORAGE_BACKUP_PATH . DIRECTORY_SEPARATOR . 'lrs_test';
-        $statement1 = $helper->getStatement();
 
         Storage::makeDirectory(HelperTest::STORAGE_BACKUP_PATH);
         Storage::makeDirectory($filePathBackup);
-        
-        $this->call('POST', HelperTest::URL, [$statement1], [], [], $this->authentication())->getContent();
-        $statements = $repo->all('lrs_test', self::LIMIT, null, 1); 
-        $this->assertTrue(isset($statements['statements'][0]));
 
-        $statements = $repo->all('lrs_test', self::LIMIT, null, 20); 
+        $this->call('POST', HelperTest::URL, [$helper->getStatement(), $helper->getStatement()], [], [], $this->authentication())->getContent();
+        $statements = $repo->all('lrs_test', self::LIMIT, null, 1);
+        $this->assertTrue(isset($statements['statements'][0]));
+        $this->assertCount(2, $statements['statements']);
+        $statements = $repo->all('lrs_test', self::LIMIT, null, 2);
         $this->assertEquals(null, $statements);
+
+        $statements = $repo->all('lrs_test', 1, null, 2);
+        $this->assertCount(1, $statements['statements']);
     }
 
     /**
      * @test
      * @return void
-    */
+     */
     public function getStatementTest()
     {
         $helper = $this->help();
@@ -235,7 +225,7 @@ abstract class RepositoryBaseCase extends TestCase
         $this->assertEquals(json_encode($helper->getStatement()), json_encode($statement));
     }
 
-        /**
+    /**
      * @test
      * @return void
      */
@@ -293,7 +283,7 @@ abstract class RepositoryBaseCase extends TestCase
 
         $this->assertEquals(null, $statement);
     }
-    
+
     /**
      * @test
      * @return void

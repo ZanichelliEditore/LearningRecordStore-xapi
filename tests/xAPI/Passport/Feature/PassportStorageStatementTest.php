@@ -8,10 +8,10 @@ use \StorageBaseCase as StorageBase;
 class PassportStorageStatementTest extends StorageBase
 {
 
-        /**
+    /**
      * Request oauth token
      * @return  array
-    */
+     */
     public function authentication()
     {
         $helper = $this->help();
@@ -28,11 +28,10 @@ class PassportStorageStatementTest extends StorageBase
         try {
             $access_token = $body->access_token;
         } catch (Exception $e) {
-            Log::error('Test error: '. (string)$e);
+            Log::error('Test error: ' . (string) $e);
             $access_token = '';
         }
 
         return $helper->createHeader($access_token);
     }
-
 }
